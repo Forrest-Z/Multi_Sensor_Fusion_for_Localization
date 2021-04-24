@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- <param name="/use_sim_time" value="true"/> -->
+
+
+    <!-- ArUco mapping -->
+    <node pkg="aruco_mapping" type="aruco_mapping" name="aruco_mapping" output="screen">
+        <remap from="/image_raw" to="/camera/color/image_raw"/>
+
+        <param name="calibration_file" type="string" value="$(find aruco_mapping)/data/rs_d435.ini" />
+        <param name="num_of_markers" type="int" value="2" />
+        <!-- 这个size就是标签最外面的黑色框的大小 -->
+        <param name="marker_size" type="double" value="0.132"/>
+        <param name="space_type" type="string" value="plane" />
+        <param name="roi_allowed" type="bool" value="false" />
+
+
+    </node>
+
+
+    <rosparam command="load" file="$(find lidar_camera_calibration)/conf/lidar_camera_calibration.yaml" />
+    <node pkg="lidar_camera_calibration" type="find_transform" name="find_transform" output="screen">
+    </node>
+</launch>
+

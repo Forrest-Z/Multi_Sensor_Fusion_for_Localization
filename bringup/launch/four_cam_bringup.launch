@@ -1,0 +1,68 @@
+<launch>
+    <!-- 串口号 -->        
+    <arg name="serial_no_camera1" default="819612073641"/>
+    <arg name="serial_no_camera2" default="817612070676"/>
+    <arg name="serial_no_camera3" default="048622071047"/>
+    <arg name="serial_no_camera4" default="043322070573"/>
+    <!-- 相机编号 -->
+    <arg name="camera1" default="camera1"/>
+    <arg name="camera2" default="camera2"/>
+    <arg name="camera3" default="camera3"/>
+    <arg name="camera4" default="camera4"/>
+    <!-- tf编号 -->
+    <arg name="tf_prefix_camera1" default="$(arg camera1)"/>
+    <arg name="tf_prefix_camera2" default="$(arg camera2)"/>
+    <arg name="tf_prefix_camera3" default="$(arg camera3)"/>
+    <arg name="tf_prefix_camera4" default="$(arg camera4)"/>
+    <!-- 启动配置 -->
+    <arg name="initial_reset" default="false"/>
+    <arg name="enable_depth" default="false"/>
+    <arg name="color_width" default="320"/>
+    <arg name="color_height" default="240"/>
+    <arg name="color_fps" default="30"/>
+
+    <group ns="$(arg camera1)">
+        <include file="$(find bringup)/launch/include/nodelet.launch.xml">
+            <arg name="serial_no" value="$(arg serial_no_camera1)"/>
+            <arg name="tf_prefix" value="$(arg tf_prefix_camera1)"/>
+            <arg name="initial_reset" value="$(arg initial_reset)"/>
+            <arg name="enable_depth" value="$(arg enable_depth)"/>
+            <arg name="color_width" value="$(arg color_width)"/>
+            <arg name="color_height" value="$(arg color_height)"/>
+            <arg name="color_fps" value="$(arg color_fps)"/>
+        </include>
+    </group>
+    <group ns="$(arg camera2)">
+        <include file="$(find bringup)/launch/include/nodelet.launch.xml">
+            <arg name="serial_no" value="$(arg serial_no_camera2)"/>
+            <arg name="tf_prefix" value="$(arg tf_prefix_camera2)"/>
+            <arg name="initial_reset" value="$(arg initial_reset)"/>
+            <arg name="enable_depth" value="$(arg enable_depth)"/>
+            <arg name="color_width" value="$(arg color_width)"/>
+            <arg name="color_height" value="$(arg color_height)"/>
+            <arg name="color_fps" value="$(arg color_fps)"/>
+        </include>
+    </group>
+    <group ns="$(arg camera3)">
+        <include file="$(find bringup)/launch/include/nodelet.launch.xml">
+            <arg name="serial_no" value="$(arg serial_no_camera3)"/>
+            <arg name="tf_prefix" value="$(arg tf_prefix_camera3)"/>
+            <arg name="initial_reset" value="$(arg initial_reset)"/>
+            <arg name="enable_depth" value="$(arg enable_depth)"/>
+            <arg name="color_width" value="$(arg color_width)"/>
+            <arg name="color_height" value="$(arg color_height)"/>
+            <arg name="color_fps" value="$(arg color_fps)"/>
+        </include>
+    </group>
+    <group ns="$(arg camera4)">
+        <include file="$(find bringup)/launch/include/nodelet.launch.xml">
+            <arg name="serial_no" value="$(arg serial_no_camera4)"/>
+            <arg name="tf_prefix" value="$(arg tf_prefix_camera1)"/>
+            <arg name="initial_reset" value="$(arg initial_reset)"/>
+            <arg name="enable_depth" value="$(arg enable_depth)"/>
+            <arg name="color_width" value="$(arg color_width)"/>
+            <arg name="color_height" value="$(arg color_height)"/>
+            <arg name="color_fps" value="$(arg color_fps)"/>
+        </include>
+    </group>
+</launch>

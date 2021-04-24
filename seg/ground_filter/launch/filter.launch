@@ -1,0 +1,9 @@
+<launch>
+    <node pkg="ground_filter" type="ground_filter_node" name="ground_filter" output="screen">
+        <param name="n_iter" value="1"/>
+        <param name="n_lpr" value="2000"/>
+        <param name="topic_str" value="/velodyne_points"/>
+        <param name="thres_seeds" value="2"/>
+        <param name="thres_dist" value="-0.12"/>
+    </node>
+</launch>
