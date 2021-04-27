@@ -3,11 +3,12 @@
 // #define DEBUG
 
 /* 读取参数 */
-void projector::initParams()
+void projector::initParams(ros::NodeHandle nh)
 {
-    // 拿到package的路径
-    std::string pkg_loc = ros::package::getPath("cam_lidar_seg");
-    std::ifstream infile(pkg_loc + "/cfg/onecam.txt");
+    std::string cfg_path;
+    nh.getParam("/cfg", cfg_path);
+    std::cout << "从 " << cfg_path << " 加载参数" << std::endl;
+    std::ifstream infile(cfg_path);
     infile >> i_params.camera_topic;
     infile >> i_params.lidar_topic;
 #ifdef TEST
@@ -37,7 +38,7 @@ void projector::projection_callback(const sensor_msgs::Image::ConstPtr &img,
                                     const sensor_msgs::PointCloud2::ConstPtr &pc)
 {
 #ifdef TEST
-    // 用于计时
+    // 计时
     pcl::console::TicToc run_time;
     run_time.tic();
 #endif
@@ -74,9 +75,6 @@ void projector::projection_callback(const sensor_msgs::Image::ConstPtr &img,
     cv::Vec3b color_bgr;
     // 上色后的点云
     pcl::PointCloud<pcl::PointXYZRGB> seg_cloud;
-#ifdef DEBUG
-    std::cout << "进入循环" << std::endl;
-#endif
     for (pcl::PointCloud<pcl::PointXYZ>::const_iterator it = cloud->points.begin(); it != cloud->points.end(); it++)
     {
         // 使用坐标过滤点云
@@ -108,6 +106,24 @@ void projector::projection_callback(const sensor_msgs::Image::ConstPtr &img,
         if (pixel.inside(frame))
         {
             color_bgr = raw_img.at<cv::Vec3b>(pixel);
+            /*  
+            // 根据颜色删除点云
+            // 道路
+            if (color_bgr(0) == 140 && color_bgr(1) == 140 && color_bgr(2) == 140)
+            {
+                continue;
+            }
+            // 车辆
+            if (color_bgr(0) == 200 && color_bgr(1) == 102 && color_bgr(2) == 0)
+            {
+                continue;
+            }
+            // 行人
+            if (color_bgr(0) == 61 && color_bgr(1) == 5 && color_bgr(2) == 150)
+            {
+                continue;
+            } 
+            */
             seg_point.x = points_in_cam_homo.at<double>(0, 0);
             seg_point.y = points_in_cam_homo.at<double>(1, 0);
             seg_point.z = points_in_cam_homo.at<double>(2, 0);
@@ -115,7 +131,7 @@ void projector::projection_callback(const sensor_msgs::Image::ConstPtr &img,
             seg_point.g = color_bgr(1);
             seg_point.r = color_bgr(2);
             seg_cloud.push_back(seg_point);
-            cv::circle(fusion_img, pixel, 1, color_bgr);
+            cv::circle(fusion_img, pixel, 5, color_bgr, -1);
         }
         // 是野外点云为红色
         else
@@ -128,51 +144,6 @@ void projector::projection_callback(const sensor_msgs::Image::ConstPtr &img,
             seg_point.b = 0;
             seg_cloud.push_back(seg_point);
         }
-
-        /* // 视野外的点
-        if (pixel.x < 0 || pixel.y < 0 || pixel.x > raw_img.cols || pixel.y > raw_img.rows)
-        {
-            seg_point.x = points_in_cam_homo.at<double>(0, 0);
-            seg_point.y = points_in_cam_homo.at<double>(1, 0);
-            seg_point.z = points_in_cam_homo.at<double>(2, 0);
-            seg_point.r = 255;
-            seg_point.g = 0;
-            seg_point.b = 0;
-            seg_cloud.push_back(seg_point);
-        }
-        // 视野内的点
-        else
-        {
-            // 拿到像素点的颜色，注意opencv的横纵坐标顺序，直接用cv::Point最保险
-            color_bgr = raw_img.at<cv::Vec3b>(pixel);
-            // 根据颜色删除点云
-            // 道路
-            // if (color_bgr(0) == 140 && color_bgr(1) == 140 && color_bgr(2) == 140)
-            // {
-            //     continue;
-            // }
-            // 车辆
-            // if (color_bgr(0) == 200 && color_bgr(1) == 102 && color_bgr(2) == 0)
-            // {
-            //     continue;
-            // }
-            // // 行人
-            // if (color_bgr(0) == 61 && color_bgr(1) == 5 && color_bgr(2) == 150)
-            // {
-            //     continue;
-            // }
-            seg_point.x = points_in_cam_homo.at<double>(0, 0);
-            seg_point.y = points_in_cam_homo.at<double>(1, 0);
-            seg_point.z = points_in_cam_homo.at<double>(2, 0);
-            seg_point.b = color_bgr(0);
-            seg_point.g = color_bgr(1);
-            seg_point.r = color_bgr(2);
-            seg_cloud.push_back(seg_point);
-            cv::circle(fusion_img, pixel, 5, color_bgr);
-        } */
-#ifdef DEBUG
-        std::cout << "上色成功" << std::endl;
-#endif
     }
     // 发布点云投影后的图像
     cv_ptr->image = fusion_img;
@@ -183,6 +154,7 @@ void projector::projection_callback(const sensor_msgs::Image::ConstPtr &img,
     // 发布分割后的点云
     sensor_msgs::PointCloud2 seg_cloud_ros;
     pcl::toROSMsg(seg_cloud, seg_cloud_ros);
+    seg_cloud.clear();
     seg_cloud_ros.header.frame_id = img->header.frame_id;
     seg_cloud_ros.header.stamp = pc->header.stamp;
     seg_cloud_pub.publish(seg_cloud_ros);
@@ -199,7 +171,7 @@ projector::projector()
 {
     ros::NodeHandle nh("~");
     // 读取参数
-    initParams();
+    initParams(nh);
 
     // 读取相机和雷达的topic并同步
     message_filters::Subscriber<sensor_msgs::Image> image_sub(nh, i_params.camera_topic, 5);

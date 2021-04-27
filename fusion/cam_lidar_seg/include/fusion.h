@@ -28,21 +28,17 @@
 class fusion
 {
 private:
-    // 图像和点云的发布
-    image_transport::Publisher image_publisher;
-    ros::Publisher seg_cloud_pub;
+    cv_bridge::CvImageConstPtr cv_ptr1;
+    cv_bridge::CvImageConstPtr cv_ptr2;
+    cv_bridge::CvImageConstPtr cv_ptr3;
+    cv_bridge::CvImageConstPtr cv_ptr4;
 
-    // 输入的四个图像
-    cv_bridge::CvImagePtr cv_ptr1;
-    cv_bridge::CvImagePtr cv_ptr2;
-    cv_bridge::CvImagePtr cv_ptr3;
-    cv_bridge::CvImagePtr cv_ptr4;
-
-    // 输入的点云
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
-
-    // 输出分割后的点云
+    // 分割后的点云
     pcl::PointCloud<pcl::PointXYZRGB> seg_cloud;
+
+    // 输出图像和点云
+    // image_transport::Publisher image_publisher;
+    ros::Publisher seg_cloud_pub;
 
     // 存储参数
     struct initial_parameters
@@ -56,23 +52,22 @@ private:
         cv::Mat camera2_in;
         cv::Mat camera3_in;
         cv::Mat camera4_in;
-        cv::Mat cam1tolidar;
-        cv::Mat cam2tolidar;
-        cv::Mat cam3tolidar;
-        cv::Mat cam4tolidar;
-    } i_params;
+        cv::Mat lidar_cam1;
+        cv::Mat lidar_cam2;
+        cv::Mat lidar_cam3;
+        cv::Mat lidar_cam4;
+    } params;
 
     void fusion_callback(const sensor_msgs::Image::ConstPtr &img1,
                          const sensor_msgs::Image::ConstPtr &img2,
                          const sensor_msgs::Image::ConstPtr &img3,
                          const sensor_msgs::Image::ConstPtr &img4,
                          const sensor_msgs::PointCloud2::ConstPtr &pc);
-    void seg_pxpy(pcl::PointCloud<pcl::PointXYZ>::const_iterator &it);
-    void seg_nxpy(pcl::PointCloud<pcl::PointXYZ>::const_iterator &it);
-    void seg_nxny(pcl::PointCloud<pcl::PointXYZ>::const_iterator &it);
-    void seg_pxny(pcl::PointCloud<pcl::PointXYZ>::const_iterator &it);
 
-    void initParams();
+    void seg(pcl::PointCloud<pcl::PointXYZ>::const_iterator it,
+             const cv::Mat &camIn, const cv::Mat &RT, cv_bridge::CvImageConstPtr img);
+
+    void initParams(ros::NodeHandle nh);
 
 public:
     fusion();

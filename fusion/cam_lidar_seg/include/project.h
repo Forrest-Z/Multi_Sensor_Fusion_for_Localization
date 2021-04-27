@@ -41,7 +41,7 @@ private:
 
     void projection_callback(const sensor_msgs::Image::ConstPtr &img,
                              const sensor_msgs::PointCloud2::ConstPtr &pc);
-    void initParams();
+    void initParams(ros::NodeHandle nh);
 
 public:
     projector();
