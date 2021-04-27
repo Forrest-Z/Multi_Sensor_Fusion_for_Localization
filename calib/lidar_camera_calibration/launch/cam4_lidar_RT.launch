@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- 真实环境注释下面 -->
+    <!-- <param name="/use_sim_time" value="true"/> -->
+
+    <!-- ArUco mapping -->
+    <node pkg="aruco_mapping" type="aruco_mapping" name="aruco_mapping" output="screen">
+        <!-- 相机内参和话题 -->
+        <remap from="/image_raw" to="/camera/color/image_raw"/>
+        <param name="calibration_file" type="string" value="$(find aruco_mapping)/data/cam4.ini" />
+        <!-- marker参数，marker_size是整个marker的大小，不是一个小格子的，单位m -->
+        <param name="num_of_markers" type="int" value="2" />
+        <param name="marker_size" type="double" value="0.175"/>
+        <param name="space_type" type="string" value="plane" />
+        <param name="roi_allowed" type="bool" value="false" />
+    </node>
+
+    <!-- 在参数文件中配置相机和雷达的话题 -->
+    <rosparam command="load" file="$(find lidar_camera_calibration)/conf/lidar_camera_calibration.yaml" />
+    <node pkg="lidar_camera_calibration" type="find_transform" name="find_transform" output="screen"/>
+</launch>
+

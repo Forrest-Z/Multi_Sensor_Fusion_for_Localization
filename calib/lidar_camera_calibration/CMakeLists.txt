@@ -40,7 +40,13 @@ add_definitions(${PCL_DEFINITIONS})
 
 include_directories(include ${catkin_INCLUDE_DIRS})
 
-add_executable(find_transform src/find_velodyne_points.cpp src/Corners.cpp) 
+add_executable(find_transform     
+    src/find_velodyne_points.cpp 
+    src/get_corners.cpp 
+    src/get_RT.cpp 
+    src/utils_config.cpp 
+    src/utils_pcl.cpp
+) 
 target_link_libraries(find_transform ${PCL_LIBRARIES}) 
 target_link_libraries(find_transform ${catkin_LIBRARIES})
 target_link_libraries(find_transform ${OpenCV_LIBS})

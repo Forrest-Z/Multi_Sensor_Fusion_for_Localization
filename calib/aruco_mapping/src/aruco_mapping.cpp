@@ -284,7 +284,7 @@ ArucoMapping::processImage(cv::Mat input_image,cv::Mat output_image)
   //------------------------------------------------------
   // FOR EVERY MARKER DO
   //------------------------------------------------------
-  std::string pkg_loc = ros::package::getPath("lidar_camera_calibration") + "/conf/transform.txt";
+  std::string pkg_loc = ros::package::getPath("lidar_camera_calibration") + "/log/transform.txt";
   std::ofstream outfile(pkg_loc.c_str(), std::ios_base::trunc);
 
   lidar_camera_calibration::marker_6dof marker_r_and_t;

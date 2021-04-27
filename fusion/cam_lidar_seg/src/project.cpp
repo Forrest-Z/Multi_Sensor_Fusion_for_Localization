@@ -6,24 +6,16 @@
 void projector::initParams()
 {
     // 拿到package的路径
-    std::string pkg_loc = ros::package::getPath("ros_detection_tracking");
-    std::ifstream infile(pkg_loc + "/cfg/kitti.txt");
+    std::string pkg_loc = ros::package::getPath("cam_lidar_seg");
+    std::ifstream infile(pkg_loc + "/cfg/onecam.txt");
     infile >> i_params.camera_topic;
     infile >> i_params.lidar_topic;
 #ifdef TEST
     std::cout << "从" << i_params.camera_topic << "话题读取相机数据" << std::endl;
     std::cout << "从" << i_params.lidar_topic << "话题读取雷达数据" << std::endl;
 #endif
-    double_t camtocam[12];
-    double_t cameraIn[16];
+    double_t cameraIn[12];
     double_t RT[16];
-    for (int i = 0; i < 16; i++)
-        infile >> camtocam[i];
-    cv::Mat(4, 4, 6, &camtocam).copyTo(i_params.camtocam_mat);
-#ifdef TEST
-    std::cout << "相机之间的外参" << '\n'
-              << i_params.camtocam_mat << std::endl;
-#endif
     for (int i = 0; i < 12; i++)
         infile >> cameraIn[i];
     cv::Mat(3, 4, 6, &cameraIn).copyTo(i_params.cameraIn);
@@ -88,28 +80,56 @@ void projector::projection_callback(const sensor_msgs::Image::ConstPtr &img,
     for (pcl::PointCloud<pcl::PointXYZ>::const_iterator it = cloud->points.begin(); it != cloud->points.end(); it++)
     {
         // 使用坐标过滤点云
-        if (it->x < 0.0)
-        {
-            continue;
-        }
+        // if (it->x < 0.0)
+        // {
+        //     continue;
+        // }
         // 把点云数据存到齐次坐标点X中
         points_in_lidar_homo.at<double>(0, 0) = it->x;
         points_in_lidar_homo.at<double>(1, 0) = it->y;
         points_in_lidar_homo.at<double>(2, 0) = it->z;
         points_in_lidar_homo.at<double>(3, 0) = 1;
         // 相机坐标下的点云 = 相机之间的外参 * 相机和雷达的外参 * 雷达坐标系下的齐次点云
-        points_in_cam_homo = i_params.camtocam_mat * i_params.RT * points_in_lidar_homo;
+        points_in_cam_homo = i_params.RT * points_in_lidar_homo;
         // 像素坐标 = 内参矩阵 * 相机坐标下的点
         pixel_homo = i_params.cameraIn * points_in_cam_homo;
         // 归一化像素坐标
-        pixel.x = pixel_homo.at<double>(0, 0) / pixel_homo.at<double>(2, 0);
-        pixel.y = pixel_homo.at<double>(1, 0) / pixel_homo.at<double>(2, 0);
+        // 这里可能会负负得正！
+        pixel.x = pixel_homo.at<double>(0, 0) / abs(pixel_homo.at<double>(2, 0));
+        pixel.y = pixel_homo.at<double>(1, 0) / abs(pixel_homo.at<double>(2, 0));
 #ifdef DEBUG
         std::cout << "像素投影成功" << std::endl;
 #endif
         // 点云上色和图像上色
         pcl::PointXYZRGB seg_point;
-        // 视野外的点
+        // 相机视野框
+        cv::Rect2d frame(0, 0, raw_img.cols, raw_img.rows);
+        // 视野内点云按照相机上色
+        if (pixel.inside(frame))
+        {
+            color_bgr = raw_img.at<cv::Vec3b>(pixel);
+            seg_point.x = points_in_cam_homo.at<double>(0, 0);
+            seg_point.y = points_in_cam_homo.at<double>(1, 0);
+            seg_point.z = points_in_cam_homo.at<double>(2, 0);
+            seg_point.b = color_bgr(0);
+            seg_point.g = color_bgr(1);
+            seg_point.r = color_bgr(2);
+            seg_cloud.push_back(seg_point);
+            cv::circle(fusion_img, pixel, 1, color_bgr);
+        }
+        // 是野外点云为红色
+        else
+        {
+            seg_point.x = points_in_cam_homo.at<double>(0, 0);
+            seg_point.y = points_in_cam_homo.at<double>(1, 0);
+            seg_point.z = points_in_cam_homo.at<double>(2, 0);
+            seg_point.r = 255;
+            seg_point.g = 0;
+            seg_point.b = 0;
+            seg_cloud.push_back(seg_point);
+        }
+
+        /* // 视野外的点
         if (pixel.x < 0 || pixel.y < 0 || pixel.x > raw_img.cols || pixel.y > raw_img.rows)
         {
             seg_point.x = points_in_cam_homo.at<double>(0, 0);
@@ -132,15 +152,15 @@ void projector::projection_callback(const sensor_msgs::Image::ConstPtr &img,
             //     continue;
             // }
             // 车辆
-            if (color_bgr(0) == 200 && color_bgr(1) == 102 && color_bgr(2) == 0)
-            {
-                continue;
-            }
-            // 行人
-            if (color_bgr(0) == 61 && color_bgr(1) == 5 && color_bgr(2) == 150)
-            {
-                continue;
-            }
+            // if (color_bgr(0) == 200 && color_bgr(1) == 102 && color_bgr(2) == 0)
+            // {
+            //     continue;
+            // }
+            // // 行人
+            // if (color_bgr(0) == 61 && color_bgr(1) == 5 && color_bgr(2) == 150)
+            // {
+            //     continue;
+            // }
             seg_point.x = points_in_cam_homo.at<double>(0, 0);
             seg_point.y = points_in_cam_homo.at<double>(1, 0);
             seg_point.z = points_in_cam_homo.at<double>(2, 0);
@@ -148,8 +168,8 @@ void projector::projection_callback(const sensor_msgs::Image::ConstPtr &img,
             seg_point.g = color_bgr(1);
             seg_point.r = color_bgr(2);
             seg_cloud.push_back(seg_point);
-            cv::circle(fusion_img, pixel, 2, color_bgr);
-        }
+            cv::circle(fusion_img, pixel, 5, color_bgr);
+        } */
 #ifdef DEBUG
         std::cout << "上色成功" << std::endl;
 #endif
@@ -172,15 +192,6 @@ void projector::projection_callback(const sensor_msgs::Image::ConstPtr &img,
 #ifdef TEST
     std::cout << "程序运行时间:" << run_time.toc() << " ms" << std::endl;
 #endif
-}
-
-/* 计算点的水平旋转角度 */
-float projector::calPointAngle(const pcl::PointCloud<pcl::PointXYZ>::const_iterator &point)
-{
-    float r = sqrt(point->x * point->x + point->y * point->y + point->z * point->z);
-    float omega_rad = -asin(point->z / r);
-    float alpha_rad = acos(point->x / r / cos(omega_rad));
-    return alpha_rad;
 }
 
 /* projector */
