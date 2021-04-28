@@ -7,7 +7,7 @@
     <node pkg="aruco_mapping" type="aruco_mapping" name="aruco_mapping" output="screen">
         <!-- 相机内参和话题 -->
         <remap from="/image_raw" to="/camera/color/image_raw"/>
-        <param name="calibration_file" type="string" value="$(find aruco_mapping)/data/cam3.ini" />
+        <param name="calibration_file" type="string" value="$(find aruco_mapping)/data/320x240/cam3.ini" />
         <!-- marker参数，marker_size是整个marker的大小，不是一个小格子的，单位m -->
         <param name="num_of_markers" type="int" value="2" />
         <param name="marker_size" type="double" value="0.175"/>
