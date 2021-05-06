@@ -29,8 +29,8 @@
     <arg name="enable_infra2" default="false"/>
     <arg name="infra_rgb" default="false"/>
 
-    <arg name="color_width" default="1280"/>
-    <arg name="color_height" default="720"/>
+    <arg name="color_width" default="320"/>
+    <arg name="color_height" default="240"/>
     <arg name="enable_color" default="true"/>
 
     <arg name="fisheye_fps" default="30"/>
