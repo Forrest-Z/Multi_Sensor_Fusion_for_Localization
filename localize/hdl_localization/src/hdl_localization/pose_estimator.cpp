@@ -15,33 +15,41 @@ namespace hdl_localization {
  * @param quat                initial orientation
  * @param cool_time_duration  during "cool time", prediction is not performed
  */
-PoseEstimator::PoseEstimator(pcl::Registration<PointT, PointT>::Ptr& registration, const ros::Time& stamp, const Eigen::Vector3f& pos, const Eigen::Quaternionf& quat, double cool_time_duration)
-    : init_stamp(stamp), registration(registration), cool_time_duration(cool_time_duration) {
+PoseEstimator::PoseEstimator(
+  pcl::Registration<PointT, PointT>::Ptr& registration,
+  const ros::Time& stamp,
+  const Eigen::Vector3f& pos,
+  const Eigen::Quaternionf& quat,
+  double cool_time_duration)
+: init_stamp(stamp),
+  registration(registration),
+  cool_time_duration(cool_time_duration) {
   last_observation = Eigen::Matrix4f::Identity();
   last_observation.block<3, 3>(0, 0) = quat.toRotationMatrix();
   last_observation.block<3, 1>(0, 3) = pos;
-
+  // 单位矩阵初始化，给过程噪声
   process_noise = Eigen::MatrixXf::Identity(16, 16);
   process_noise.middleRows(0, 3) *= 1.0;
   process_noise.middleRows(3, 3) *= 1.0;
   process_noise.middleRows(6, 4) *= 0.5;
   process_noise.middleRows(10, 3) *= 1e-6;
   process_noise.middleRows(13, 3) *= 1e-6;
-
+  // 测量噪声，单位矩阵
   Eigen::MatrixXf measurement_noise = Eigen::MatrixXf::Identity(7, 7);
   measurement_noise.middleRows(0, 3) *= 0.01;
   measurement_noise.middleRows(3, 4) *= 0.001;
-
+  // 加权平均的位姿
   Eigen::VectorXf mean(16);
   mean.middleRows(0, 3) = pos;
   mean.middleRows(3, 3).setZero();
   mean.middleRows(6, 4) = Eigen::Vector4f(quat.w(), quat.x(), quat.y(), quat.z());
   mean.middleRows(10, 3).setZero();
   mean.middleRows(13, 3).setZero();
-
+  // 初始化协方差矩阵
   Eigen::MatrixXf cov = Eigen::MatrixXf::Identity(16, 16) * 0.01;
-
+  // 建立一个位姿系统
   PoseSystem system;
+  // 初始化ukf
   ukf.reset(new kkl::alg::UnscentedKalmanFilterX<float, PoseSystem>(system, 16, 6, 7, process_noise, measurement_noise, mean, cov));
 }
 
@@ -97,7 +105,7 @@ void PoseEstimator::predict(const ros::Time& stamp, const Eigen::Vector3f& acc, 
  * @brief update the state of the odomety-based pose estimation
  */
 void PoseEstimator::predict_odom(const Eigen::Matrix4f& odom_delta) {
-  if(!odom_ukf) {
+  if (!odom_ukf) {
     Eigen::MatrixXf odom_process_noise = Eigen::MatrixXf::Identity(7, 7);
     Eigen::MatrixXf odom_measurement_noise = Eigen::MatrixXf::Identity(7, 7) * 1e-3;
 
@@ -112,7 +120,7 @@ void PoseEstimator::predict_odom(const Eigen::Matrix4f& odom_delta) {
 
   // invert quaternion if the rotation axis is flipped
   Eigen::Quaternionf quat(odom_delta.block<3, 3>(0, 0));
-  if(odom_quat().coeffs().dot(quat.coeffs()) < 0.0) {
+  if (odom_quat().coeffs().dot(quat.coeffs()) < 0.0) {
     quat.coeffs() *= -1.0f;
   }
 
@@ -141,7 +149,7 @@ pcl::PointCloud<PoseEstimator::PointT>::Ptr PoseEstimator::correct(const ros::Ti
   Eigen::Matrix4f odom_guess;
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();
 
-  if(!odom_ukf) {
+  if (!odom_ukf) {
     init_guess = imu_guess = matrix();
   } else {
     imu_guess = matrix();
@@ -182,7 +190,7 @@ pcl::PointCloud<PoseEstimator::PointT>::Ptr PoseEstimator::correct(const ros::Ti
   Eigen::Vector3f p = trans.block<3, 1>(0, 3);
   Eigen::Quaternionf q(trans.block<3, 3>(0, 0));
 
-  if(quat().coeffs().dot(q.coeffs()) < 0.0f) {
+  if (quat().coeffs().dot(q.coeffs()) < 0.0f) {
     q.coeffs() *= -1.0f;
   }
 
@@ -196,7 +204,7 @@ pcl::PointCloud<PoseEstimator::PointT>::Ptr PoseEstimator::correct(const ros::Ti
   ukf->correct(observation);
   imu_pred_error = imu_guess.inverse() * registration->getFinalTransformation();
 
-  if(odom_ukf) {
+  if (odom_ukf) {
     if (observation.tail<4>().dot(odom_ukf->mean.tail<4>()) < 0.0) {
       odom_ukf->mean.tail<4>() *= -1.0;
     }
@@ -258,4 +266,4 @@ const boost::optional<Eigen::Matrix4f>& PoseEstimator::imu_prediction_error() co
 const boost::optional<Eigen::Matrix4f>& PoseEstimator::odom_prediction_error() const {
   return odom_pred_error;
 }
-}
+}  // namespace hdl_localization

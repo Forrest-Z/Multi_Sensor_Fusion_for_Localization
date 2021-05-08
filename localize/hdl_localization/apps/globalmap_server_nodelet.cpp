@@ -34,6 +34,7 @@ public:
 
     // publish globalmap with "latched" publisher
     globalmap_pub = nh.advertise<sensor_msgs::PointCloud2>("/globalmap", 5, true);
+    // 计数器触发回调函数，现在设置的全局地图按照1hz发布
     globalmap_pub_timer = nh.createWallTimer(ros::WallDuration(1.0), &GlobalmapServerNodelet::pub_once_cb, this, true, true);
   }
 
@@ -59,6 +60,7 @@ private:
     }
 
     // downsample globalmap
+    // 全局地图进来之后被降采样
     double downsample_resolution = private_nh.param<double>("downsample_resolution", 0.1);
     boost::shared_ptr<pcl::VoxelGrid<PointT>> voxelgrid(new pcl::VoxelGrid<PointT>());
     voxelgrid->setLeafSize(downsample_resolution, downsample_resolution, downsample_resolution);
