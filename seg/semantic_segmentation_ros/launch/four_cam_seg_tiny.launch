@@ -1,20 +1,20 @@
 <launch>
 
-    <node name="semantic_segmentation_ros" pkg="semantic_segmentation_ros" type="four_cam_segmentation" output="screen">
+    <node name="semantic_segmentation_ros" pkg="semantic_segmentation_ros" type="four_cam_segmentation.py" output="screen">
 
         <!-- Input -->
         <!-- Color image_raw topic to="/topic/name" -->
         <remap from="camera1/color/image_raw" to="/camera1/color/image_raw"/>
         <remap from="camera2/color/image_raw" to="/camera2/color/image_raw"/>
-        <!--         <remap from="camera3/color/image_raw" to="/camera3/color/image_raw"/> -->
-        <!--         <remap from="camera4/color/image_raw" to="/camera4/color/image_raw"/> -->
+        <remap from="camera3/color/image_raw" to="/camera3/color/image_raw"/>
+        <remap from="camera4/color/image_raw" to="/camera4/color/image_raw"/>
 
         <!-- Output -->
         <!-- Rename output topic if required -->
-        <remap from="seg1/color/image_raw" to="/seg1/color/image_raw" />
-        <remap from="seg2/color/image_raw" to="/seg2/color/image_raw" />
-        <!--         <remap from="seg3/color/image_raw" to="/seg3/color/image_raw" /> -->
-        <!--         <remap from="seg4/color/image_raw" to="/seg4/color/image_raw" /> -->
+        <!-- <remap from="seg1/color/image_raw" to="/seg1/color/image_raw" /> -->
+        <!-- <remap from="seg2/color/image_raw" to="/seg2/color/image_raw" /> -->
+        <!-- <remap from="seg3/color/image_raw" to="/seg3/color/image_raw" /> -->
+        <!-- <remap from="seg4/color/image_raw" to="/seg4/color/image_raw" /> -->
 
         <!-- GPU ID -->
         <param name="gpu_id" value="0" />

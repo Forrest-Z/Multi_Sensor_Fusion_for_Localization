@@ -2,9 +2,9 @@
 # -*- coding: UTF-8 -*-
 
 # System libs
+
 import os
 import sys
-import argparse
 from distutils.version import LooseVersion
 # Numerical libs
 import numpy as np
@@ -12,23 +12,22 @@ import torch
 import torch.nn as nn
 from scipy.io import loadmat
 from PIL import Image as PIL_Image
-from tqdm import tqdm
 import csv
 # ROS libs
 import rospy
-from sensor_msgs.msg import Image, CompressedImage
+from sensor_msgs.msg import Image
 import message_filters
 # Our libs
 from mit_semseg.dataset import imresize, img_transform, round2nearest_multiple
 from mit_semseg.models import ModelBuilder, SegmentationModule
-from mit_semseg.utils import colorEncode, find_recursive, setup_logger
-from mit_semseg.lib.nn import user_scattered_collate, async_copy_to
+from mit_semseg.utils import colorEncode
+from mit_semseg.lib.nn import async_copy_to
 from mit_semseg.lib.utils import as_numpy
 from mit_semseg.config import cfg
 
 
 # 分割的类
-class ROSSegmentation():
+class ROSSegmentation:
     # 初始化中解析参数并建立网络
     def __init__(self, cfg):
         # 参数解析
@@ -40,7 +39,7 @@ class ROSSegmentation():
         # 配置GPU
         torch.cuda.set_device(self.cfg.gpu_id)
 
-        # 配置编码器和解码器，这里直接调用了MIT库的APT
+        # 配置编码器和解码器，这里直接调用了MIT库的API
         self.net_encoder = ModelBuilder.build_encoder(arch=self.cfg.MODEL.arch_encoder,
                                                       fc_dim=self.cfg.MODEL.fc_dim,
                                                       weights=self.cfg.MODEL.weights_encoder)
@@ -52,7 +51,7 @@ class ROSSegmentation():
         # 配置分割网络模型
         self.segmentation_module = SegmentationModule(self.net_encoder, self.net_decoder,
                                                       crit=nn.NLLLoss(ignore_index=-1))
-        
+
         self.segmentation_module.cuda()
         self.segmentation_module.eval()
 
@@ -67,14 +66,17 @@ class ROSSegmentation():
             "seg4/color/image_raw", Image, queue_size=10)
 
         # 订阅图片
-        self.img1_sub = rospy.Subscriber(
-            "camera1/color/image_raw", Image, self.img1_cb, queue_size=1, buff_size=2**24)
-        self.img2_sub = rospy.Subscriber(
-            "camera2/color/image_raw", Image, self.img2_cb, queue_size=1, buff_size=2**24)
-        # self.img3_sub = rospy.Subscriber(
-        #     "camera3/color/image_raw", Image, self.img3_cb, queue_size=1, buff_size=2**24)
-        # self.img4_sub = rospy.Subscriber(
-        #     "camera4/color/image_raw", Image, self.img4_cb, queue_size=1, buff_size=2**24)
+        self.img1_sub = message_filters.Subscriber(
+            'camera1/color/image_raw', Image)
+        self.img2_sub = message_filters.Subscriber(
+            'camera2/color/image_raw', Image)
+        self.img3_sub = message_filters.Subscriber(
+            'camera3/color/image_raw', Image)
+        self.img4_sub = message_filters.Subscriber(
+            'camera4/color/image_raw', Image)
+        self.sync = message_filters.ApproximateTimeSynchronizer(
+            [self.img1_sub, self.img2_sub, self.img3_sub, self.img4_sub], 10, 0.1)
+        self.sync.registerCallback(self.callback)
 
         rospy.loginfo("Initialization Done. Running Inference .....")
 
@@ -103,10 +105,10 @@ class ROSSegmentation():
         self.target_heights = tuple(target_height_list)
         self.segSize = (ori_height, ori_width)
 
-    # 图像预处理，把图片修改成同一尺寸并转到torch中
-    # test文件中使用pytorch的dataloader实现的
-    def preprocess(self, img_arr):
+        # 图像预处理，把图片修改成同一尺寸并转到torch中
+        # test文件中使用pytorch的dataloader实现的
 
+    def preprocess(self, img_arr):
         img = PIL_Image.fromarray(img_arr).convert('RGB')
 
         if (not self.target_widths) and (not self.target_heights):
@@ -128,17 +130,26 @@ class ROSSegmentation():
 
         return output
 
-    # 四个图像订阅回调
-    def img1_cb(self, msg):
+    def callback(self, msg1, msg2, msg3, msg4):
+        # rosmsg->numpy.具体看官方教程
+        # http://wiki.ros.org/rospy_tutorials/Tutorials/WritingImagePublisherSubscriber
+        img1_arr = np.frombuffer(msg1.data, dtype=np.uint8).reshape(
+            msg1.height, msg1.width, -1)
+        img2_arr = np.frombuffer(msg2.data, dtype=np.uint8).reshape(
+            msg2.height, msg2.width, -1)
+        img3_arr = np.frombuffer(msg3.data, dtype=np.uint8).reshape(
+            msg3.height, msg3.width, -1)
+        img4_arr = np.frombuffer(msg4.data, dtype=np.uint8).reshape(
+            msg4.height, msg4.width, -1)
+        # numpy拼接
+        img_arr_concat = np.concatenate(
+            (img1_arr, img2_arr, img3_arr, img4_arr), axis=1)
 
-        # ros的图像message转numpy
-        img_arr = np.frombuffer(msg.data, dtype=np.uint8).reshape(
-            msg.height, msg.width, -1)
+        # 把numpy的图像转成一个tensor的词典
+        # 在test中是通过pytorch的datasetload实现的
+        data_dict = self.preprocess(img_arr_concat)
 
-        # 处理数组，test中用dataloader实现的
-        data_dict = self.preprocess(img_arr)
-
-        # 下面是分割
+        # 分割
         with torch.no_grad():
             scores = torch.zeros(1, cfg.DATASET.num_class,
                                  self.segSize[0], self.segSize[1])
@@ -156,144 +167,38 @@ class ROSSegmentation():
             _, pred = torch.max(scores, dim=1)
             pred = as_numpy(pred.squeeze(0).cpu())
 
-        # 颜色编码，这个是不是可以省略提高速度？
+        # 颜色编码
+        # TODO:不进行图像编码，而是把分割的结果直接通过话题发布
         pred_color = colorEncode(pred, colors).astype(np.uint8)
 
-        out_msg = Image()
-        out_msg.header = msg.header
-        out_msg.encoding = "rgb8"
-        out_msg.height = pred_color.shape[0]
-        out_msg.width = pred_color.shape[1]
-        out_msg.step = pred_color.shape[1]*3
-        out_msg.data = pred_color.tobytes()
+        # 把分割结果分隔开
+        pred1, pred2, pred3, pred4 = np.hsplit(pred_color, 4)
 
-        self.seg1_pub.publish(out_msg)
+        out_msg1 = Image()
+        out_msg2 = Image()
+        out_msg3 = Image()
+        out_msg4 = Image()
 
-        return
+        out_msg1.header, out_msg1.encoding = msg1.header, "rgb8"
+        out_msg1.height, out_msg1.width, out_msg1.step = pred1.shape[0], pred1.shape[1], pred1.shape[1] * 3
+        out_msg1.data = pred1.tobytes()
 
-    def img2_cb(self, msg):
+        out_msg2.header, out_msg2.encoding = msg2.header, "rgb8"
+        out_msg2.height, out_msg2.width, out_msg2.step = pred2.shape[0], pred2.shape[1], pred2.shape[1] * 3
+        out_msg2.data = pred2.tobytes()
 
-        # ros的图像message转numpy
-        img_arr = np.frombuffer(msg.data, dtype=np.uint8).reshape(
-            msg.height, msg.width, -1)
+        out_msg3.header, out_msg3.encoding = msg3.header, "rgb8"
+        out_msg3.height, out_msg3.width, out_msg3.step = pred3.shape[0], pred3.shape[1], pred3.shape[1] * 3
+        out_msg3.data = pred3.tobytes()
 
-        # 处理数组，test中用dataloader实现的
-        data_dict = self.preprocess(img_arr)
+        out_msg4.header, out_msg4.encoding = msg4.header, "rgb8"
+        out_msg4.height, out_msg4.width, out_msg4.step = pred4.shape[0], pred4.shape[1], pred4.shape[1] * 3
+        out_msg4.data = pred4.tobytes()
 
-        # 下面是分割
-        with torch.no_grad():
-            scores = torch.zeros(1, cfg.DATASET.num_class,
-                                 self.segSize[0], self.segSize[1])
-            scores = async_copy_to(scores, self.cfg.gpu_id)
-
-            for img_tensor in data_dict['img_data']:
-                feed_dict = dict()
-                feed_dict['img_data'] = img_tensor
-                feed_dict = async_copy_to(feed_dict, self.cfg.gpu_id)
-
-                pred_tmp = self.segmentation_module(
-                    feed_dict, segSize=self.segSize)
-                scores = scores + pred_tmp / len(self.cfg.DATASET.imgSizes)
-
-            _, pred = torch.max(scores, dim=1)
-            pred = as_numpy(pred.squeeze(0).cpu())
-
-        # 颜色编码，这个是不是可以省略提高速度？
-        pred_color = colorEncode(pred, colors).astype(np.uint8)
-
-        out_msg = Image()
-        out_msg.header = msg.header
-        out_msg.encoding = "rgb8"
-        out_msg.height = pred_color.shape[0]
-        out_msg.width = pred_color.shape[1]
-        out_msg.step = pred_color.shape[1]*3
-        out_msg.data = pred_color.tobytes()
-
-        self.seg2_pub.publish(out_msg)
-
-        return
-
-    def img3_cb(self, msg):
-
-        # ros的图像message转numpy
-        img_arr = np.frombuffer(msg.data, dtype=np.uint8).reshape(
-            msg.height, msg.width, -1)
-
-        # 处理数组，test中用dataloader实现的
-        data_dict = self.preprocess(img_arr)
-
-        # 下面是分割
-        with torch.no_grad():
-            scores = torch.zeros(1, cfg.DATASET.num_class,
-                                 self.segSize[0], self.segSize[1])
-            scores = async_copy_to(scores, self.cfg.gpu_id)
-
-            for img_tensor in data_dict['img_data']:
-                feed_dict = dict()
-                feed_dict['img_data'] = img_tensor
-                feed_dict = async_copy_to(feed_dict, self.cfg.gpu_id)
-
-                pred_tmp = self.segmentation_module(
-                    feed_dict, segSize=self.segSize)
-                scores = scores + pred_tmp / len(self.cfg.DATASET.imgSizes)
-
-            _, pred = torch.max(scores, dim=1)
-            pred = as_numpy(pred.squeeze(0).cpu())
-
-        # 颜色编码，这个是不是可以省略提高速度？
-        pred_color = colorEncode(pred, colors).astype(np.uint8)
-
-        out_msg = Image()
-        out_msg.header = msg.header
-        out_msg.encoding = "rgb8"
-        out_msg.height = pred_color.shape[0]
-        out_msg.width = pred_color.shape[1]
-        out_msg.step = pred_color.shape[1]*3
-        out_msg.data = pred_color.tobytes()
-
-        self.seg3_pub.publish(out_msg)
-
-        return
-
-    def img4_cb(self, msg):
-
-        # ros的图像message转numpy
-        img_arr = np.frombuffer(msg.data, dtype=np.uint8).reshape(
-            msg.height, msg.width, -1)
-
-        # 处理数组，test中用dataloader实现的
-        data_dict = self.preprocess(img_arr)
-
-        # 下面是分割
-        with torch.no_grad():
-            scores = torch.zeros(1, cfg.DATASET.num_class,
-                                 self.segSize[0], self.segSize[1])
-            scores = async_copy_to(scores, self.cfg.gpu_id)
-
-            for img_tensor in data_dict['img_data']:
-                feed_dict = dict()
-                feed_dict['img_data'] = img_tensor
-                feed_dict = async_copy_to(feed_dict, self.cfg.gpu_id)
-
-                pred_tmp = self.segmentation_module(
-                    feed_dict, segSize=self.segSize)
-                scores = scores + pred_tmp / len(self.cfg.DATASET.imgSizes)
-
-            _, pred = torch.max(scores, dim=1)
-            pred = as_numpy(pred.squeeze(0).cpu())
-
-        # 颜色编码，这个是不是可以省略提高速度？
-        pred_color = colorEncode(pred, colors).astype(np.uint8)
-
-        out_msg = Image()
-        out_msg.header = msg.header
-        out_msg.encoding = "rgb8"
-        out_msg.height = pred_color.shape[0]
-        out_msg.width = pred_color.shape[1]
-        out_msg.step = pred_color.shape[1]*3
-        out_msg.data = pred_color.tobytes()
-
-        self.seg4_pub.publish(out_msg)
+        self.seg1_pub.publish(out_msg1)
+        self.seg2_pub.publish(out_msg2)
+        self.seg3_pub.publish(out_msg3)
+        self.seg4_pub.publish(out_msg4)
 
         return
 

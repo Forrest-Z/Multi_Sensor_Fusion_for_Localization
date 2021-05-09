@@ -4,10 +4,10 @@
 
         <!-- Input -->
         <!-- Color image_raw topic to="/topic/name" -->
-        <remap from="camera/color/image_raw" to="/camera/color/image_raw"/>
+        <remap from="camera/color/image_raw" to="/camera1/color/image_raw"/>
         <!-- Output -->
         <!-- Rename output topic if required -->
-        <remap from="segmentation/color/image_raw" to="/segmentation/color/image_raw" />
+        <remap from="segmentation/color/image_raw" to="/seg1/color/image_raw" />
 
         <!-- GPU ID -->
         <param name="gpu_id" value="0" />
