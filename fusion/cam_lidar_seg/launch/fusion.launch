@@ -1,5 +1,5 @@
 <launch>
-    <arg name="cfg_path" default="$(find cam_lidar_seg)/cfg/fusion.txt" />
+    <arg name="cfg_path" default="$(find cam_lidar_seg)/cfg/fusion_lowres_seg.txt" />
     <param name="cfg" type="str" value="$(arg cfg_path)" />
     <node name="camera_lidar_fusion" pkg="cam_lidar_seg" type="fusion" output="screen"/>
 </launch>

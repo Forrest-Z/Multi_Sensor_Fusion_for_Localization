@@ -1,43 +1,46 @@
 #include "../include/project.h"
-// #define TEST
+// #define TIMER
 // #define DEBUG
+
+/* 打印参数 */
+void projector::printParams()
+{
+    std::cout << "*********** 当前运行参数 ***********" << std::endl;
+    std::cout << "从" << params.camera_topic << "话题读取相机数据" << '\n'
+              << "从" << params.lidar_topic << "话题读取雷达数据" << '\n'
+              << "相机内参" << '\n'
+              << params.cameraIn << '\n'
+              << "相机-雷达外参" << '\n'
+              << params.RT << std::endl;
+    std::cout << "********************************" << std::endl;
+}
 
 /* 读取参数 */
 void projector::initParams(ros::NodeHandle nh)
 {
     std::string cfg_path;
     nh.getParam("/cfg", cfg_path);
-    std::cout << "从 " << cfg_path << " 加载参数" << std::endl;
+    std::cout << "从 " << cfg_path << " 文件加载参数" << std::endl;
     std::ifstream infile(cfg_path);
-    infile >> i_params.camera_topic;
-    infile >> i_params.lidar_topic;
-#ifdef TEST
-    std::cout << "从" << i_params.camera_topic << "话题读取相机数据" << std::endl;
-    std::cout << "从" << i_params.lidar_topic << "话题读取雷达数据" << std::endl;
-#endif
+    infile >> params.camera_topic;
+    infile >> params.lidar_topic;
+
     double_t cameraIn[12];
     double_t RT[16];
     for (int i = 0; i < 12; i++)
         infile >> cameraIn[i];
-    cv::Mat(3, 4, 6, &cameraIn).copyTo(i_params.cameraIn);
-#ifdef TEST
-    std::cout << "相机内参" << '\n'
-              << i_params.cameraIn << std::endl;
-#endif
+    cv::Mat(3, 4, 6, &cameraIn).copyTo(params.cameraIn);
+
     for (int i = 0; i < 16; i++)
         infile >> RT[i];
-    cv::Mat(4, 4, 6, &RT).copyTo(i_params.RT);
-#ifdef TEST
-    std::cout << "相机-雷达外参" << '\n'
-              << i_params.RT << std::endl;
-#endif
+    cv::Mat(4, 4, 6, &RT).copyTo(params.RT);
 }
 
 /* 同步后的数据回调函数 */
 void projector::projection_callback(const sensor_msgs::Image::ConstPtr &img,
                                     const sensor_msgs::PointCloud2::ConstPtr &pc)
 {
-#ifdef TEST
+#ifdef TIMER
     // 计时
     pcl::console::TicToc run_time;
     run_time.tic();
@@ -58,13 +61,13 @@ void projector::projection_callback(const sensor_msgs::Image::ConstPtr &img,
     cvtColor(raw_img, gray_img, cv::COLOR_BGR2GRAY);
     cv::Mat fusion_img;
     cv::cvtColor(gray_img, fusion_img, cv::COLOR_GRAY2BGR);
-#ifdef TEST
+#ifdef DEBUG
     std::cout << "图像获取成功:" << raw_img.cols << " * " << raw_img.rows << " *" << raw_img.channels() << std::endl;
 #endif
     // 获取点云
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::fromROSMsg(*pc, *cloud);
-#ifdef TEST
+#ifdef DEBUG
     std::cout << "点云获取成功:" << cloud->size() << std::endl;
 #endif
     // 各坐标下的点
@@ -88,9 +91,9 @@ void projector::projection_callback(const sensor_msgs::Image::ConstPtr &img,
         points_in_lidar_homo.at<double>(2, 0) = it->z;
         points_in_lidar_homo.at<double>(3, 0) = 1;
         // 相机坐标下的点云 = 相机之间的外参 * 相机和雷达的外参 * 雷达坐标系下的齐次点云
-        points_in_cam_homo = i_params.RT * points_in_lidar_homo;
+        points_in_cam_homo = params.RT * points_in_lidar_homo;
         // 像素坐标 = 内参矩阵 * 相机坐标下的点
-        pixel_homo = i_params.cameraIn * points_in_cam_homo;
+        pixel_homo = params.cameraIn * points_in_cam_homo;
         // 归一化像素坐标
         // 这里可能会负负得正！
         pixel.x = pixel_homo.at<double>(0, 0) / abs(pixel_homo.at<double>(2, 0));
@@ -133,7 +136,7 @@ void projector::projection_callback(const sensor_msgs::Image::ConstPtr &img,
             seg_cloud.push_back(seg_point);
             cv::circle(fusion_img, pixel, 5, color_bgr, -1);
         }
-        // 是野外点云为红色
+        // 视野外点云为红色
         else
         {
             seg_point.x = points_in_cam_homo.at<double>(0, 0);
@@ -155,13 +158,13 @@ void projector::projection_callback(const sensor_msgs::Image::ConstPtr &img,
     sensor_msgs::PointCloud2 seg_cloud_ros;
     pcl::toROSMsg(seg_cloud, seg_cloud_ros);
     seg_cloud.clear();
-    seg_cloud_ros.header.frame_id = img->header.frame_id;
+    seg_cloud_ros.header.frame_id = pc->header.frame_id;
     seg_cloud_ros.header.stamp = pc->header.stamp;
     seg_cloud_pub.publish(seg_cloud_ros);
 #ifdef DEBUG
     std::cout << "发布分割后的点云" << std::endl;
 #endif
-#ifdef TEST
+#ifdef TIMER
     std::cout << "程序运行时间:" << run_time.toc() << " ms" << std::endl;
 #endif
 }
@@ -172,10 +175,10 @@ projector::projector()
     ros::NodeHandle nh("~");
     // 读取参数
     initParams(nh);
-
+    printParams();
     // 读取相机和雷达的topic并同步
-    message_filters::Subscriber<sensor_msgs::Image> image_sub(nh, i_params.camera_topic, 5);
-    message_filters::Subscriber<sensor_msgs::PointCloud2> pcl_sub(nh, i_params.lidar_topic, 5);
+    message_filters::Subscriber<sensor_msgs::Image> image_sub(nh, params.camera_topic, 5);
+    message_filters::Subscriber<sensor_msgs::PointCloud2> pcl_sub(nh, params.lidar_topic, 5);
     typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::PointCloud2> MySyncPolicy;
     //从两个sub里面同步
     message_filters::Synchronizer<MySyncPolicy> sync(MySyncPolicy(5), image_sub, pcl_sub);
@@ -194,6 +197,5 @@ projector::projector()
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "project_pc_to_image");
-    projector pj;
-    return 0;
+    projector projector_node;
 }

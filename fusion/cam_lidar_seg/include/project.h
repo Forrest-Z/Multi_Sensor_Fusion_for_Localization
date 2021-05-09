@@ -37,11 +37,13 @@ private:
         std::string lidar_topic;
         cv::Mat cameraIn;
         cv::Mat RT;
-    } i_params;
+    } params;
 
     void projection_callback(const sensor_msgs::Image::ConstPtr &img,
                              const sensor_msgs::PointCloud2::ConstPtr &pc);
     void initParams(ros::NodeHandle nh);
+
+    void printParams();
 
 public:
     projector();
