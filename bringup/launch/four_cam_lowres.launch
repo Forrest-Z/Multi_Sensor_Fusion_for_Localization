@@ -1,5 +1,5 @@
 <launch>
-    <!-- 串口号 -->        
+    <!-- 串口号 -->
     <arg name="serial_no_camera1" default="819612073641"/>
     <arg name="serial_no_camera2" default="817612070676"/>
     <arg name="serial_no_camera3" default="048622071047"/>
@@ -9,7 +9,8 @@
     <arg name="camera2" default="camera2"/>
     <arg name="camera3" default="camera3"/>
     <arg name="camera4" default="camera4"/>
-    <!-- tf编号 -->
+    <!-- tf配置 -->
+    <arg name="publish_tf" default="false"/>
     <arg name="tf_prefix_camera1" default="$(arg camera1)"/>
     <arg name="tf_prefix_camera2" default="$(arg camera2)"/>
     <arg name="tf_prefix_camera3" default="$(arg camera3)"/>
@@ -30,6 +31,8 @@
             <arg name="color_width" value="$(arg color_width)"/>
             <arg name="color_height" value="$(arg color_height)"/>
             <arg name="color_fps" value="$(arg color_fps)"/>
+            <arg name="publish_tf" value="$(arg publish_tf)"/>
+
         </include>
     </group>
     <group ns="$(arg camera2)">
@@ -41,6 +44,8 @@
             <arg name="color_width" value="$(arg color_width)"/>
             <arg name="color_height" value="$(arg color_height)"/>
             <arg name="color_fps" value="$(arg color_fps)"/>
+            <arg name="publish_tf" value="$(arg publish_tf)"/>
+
         </include>
     </group>
     <group ns="$(arg camera3)">
@@ -52,6 +57,8 @@
             <arg name="color_width" value="$(arg color_width)"/>
             <arg name="color_height" value="$(arg color_height)"/>
             <arg name="color_fps" value="$(arg color_fps)"/>
+            <arg name="publish_tf" value="$(arg publish_tf)"/>
+
         </include>
     </group>
     <group ns="$(arg camera4)">
@@ -63,6 +70,8 @@
             <arg name="color_width" value="$(arg color_width)"/>
             <arg name="color_height" value="$(arg color_height)"/>
             <arg name="color_fps" value="$(arg color_fps)"/>
+            <arg name="publish_tf" value="$(arg publish_tf)"/>
+
         </include>
     </group>
 </launch>
