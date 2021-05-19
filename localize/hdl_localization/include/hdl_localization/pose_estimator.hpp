@@ -1,3 +1,7 @@
+/**
+ * @file pose_estimator.hpp
+ * @brief 点云的回调中使用了pose_estimator这个类估计位姿，其中又使用了ukf作为位姿的结算
+ */
 #ifndef POSE_ESTIMATOR_HPP
 #define POSE_ESTIMATOR_HPP
 
@@ -10,10 +14,11 @@
 #include <pcl/registration/registration.h>
 
 namespace kkl {
-  namespace alg {
-template<typename T, class System> class UnscentedKalmanFilterX;
-  }
+namespace alg {
+template <typename T, class System>
+class UnscentedKalmanFilterX;
 }
+}  // namespace kkl
 
 namespace hdl_localization {
 
@@ -21,7 +26,7 @@ class PoseSystem;
 class OdomSystem;
 
 /**
- * @brief scan matching-based pose estimator
+ * @brief scan matchidng-based pose estimator
  */
 class PoseEstimator {
 public:
@@ -35,7 +40,12 @@ public:
    * @param quat                initial orientation
    * @param cool_time_duration  during "cool time", prediction is not performed
    */
-  PoseEstimator(pcl::Registration<PointT, PointT>::Ptr& registration, const ros::Time& stamp, const Eigen::Vector3f& pos, const Eigen::Quaternionf& quat, double cool_time_duration = 1.0);
+  PoseEstimator(
+    pcl::Registration<PointT, PointT>::Ptr& registration,
+    const ros::Time& stamp,
+    const Eigen::Vector3f& pos,
+    const Eigen::Quaternionf& quat,
+    double cool_time_duration = 1.0);
   ~PoseEstimator();
 
   /**
@@ -96,7 +106,7 @@ private:
   boost::optional<Eigen::Matrix4f> odom_pred_error;
 
   pcl::Registration<PointT, PointT>::Ptr registration;
-  };
+};
 
 }  // namespace hdl_localization
 

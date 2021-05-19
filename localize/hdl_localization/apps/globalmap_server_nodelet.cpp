@@ -1,3 +1,8 @@
+/* 地图服务节点 
+读取点云地图文件并降采样
+发布到/globalmap话题，点云地图的frame为/map
+hdl_localization_nodelet会订阅上面的话题并进入回调
+*/
 #include <mutex>
 #include <memory>
 #include <iostream>
@@ -20,10 +25,8 @@ class GlobalmapServerNodelet : public nodelet::Nodelet {
 public:
   using PointT = pcl::PointXYZI;
 
-  GlobalmapServerNodelet() {
-  }
-  virtual ~GlobalmapServerNodelet() {
-  }
+  GlobalmapServerNodelet() {}
+  virtual ~GlobalmapServerNodelet() {}
 
   void onInit() override {
     nh = getNodeHandle();
@@ -44,6 +47,7 @@ private:
     std::string globalmap_pcd = private_nh.param<std::string>("globalmap_pcd", "");
     globalmap.reset(new pcl::PointCloud<PointT>());
     pcl::io::loadPCDFile(globalmap_pcd, *globalmap);
+    // 点云地图的frame为map
     globalmap->header.frame_id = "map";
 
     std::ifstream utm_file(globalmap_pcd + ".utm");
@@ -52,11 +56,10 @@ private:
       double utm_northing;
       double altitude;
       utm_file >> utm_easting >> utm_northing >> altitude;
-      for(auto& pt : globalmap->points) {
+      for (auto& pt : globalmap->points) {
         pt.getVector3fMap() -= Eigen::Vector3f(utm_easting, utm_northing, altitude);
       }
-      ROS_INFO_STREAM("Global map offset by UTM reference coordinates (x = "
-                      << utm_easting << ", y = " << utm_northing << ") and altitude (z = " << altitude << ")");
+      ROS_INFO_STREAM("Global map offset by UTM reference coordinates (x = " << utm_easting << ", y = " << utm_northing << ") and altitude (z = " << altitude << ")");
     }
 
     // downsample globalmap
@@ -72,9 +75,7 @@ private:
     globalmap = filtered;
   }
 
-  void pub_once_cb(const ros::WallTimerEvent& event) {
-    globalmap_pub.publish(globalmap);
-  }
+  void pub_once_cb(const ros::WallTimerEvent& event) { globalmap_pub.publish(globalmap); }
 
 private:
   // ROS
@@ -88,7 +89,6 @@ private:
   pcl::PointCloud<PointT>::Ptr globalmap;
 };
 
-}
-
+}  // namespace hdl_localization
 
 PLUGINLIB_EXPORT_CLASS(hdl_localization::GlobalmapServerNodelet, nodelet::Nodelet)

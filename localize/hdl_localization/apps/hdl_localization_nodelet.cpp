@@ -49,7 +49,7 @@ public:
     private_nh = getPrivateNodeHandle();
 
     // 1. 设置降采样的参数
-    // 2. 设置ndt的匹配方法
+    // 2. 设置ndt的匹配方法(返回一个pcl::Registration指针)
     // 3. 从launch文件设置初始位姿
     initialize_params();
 
@@ -65,16 +65,16 @@ public:
       NODELET_INFO("enable imu-based prediction");
       imu_sub = mt_nh.subscribe("/gpsimu_driver/imu_data", 256, &HdlLocalizationNodelet::imu_callback, this);
     }
-    
-    // 点云的订阅回调!!!
+
+    // 点云的订阅回调
     // 1. 把点云转到dom_child_frame上
     // 2. 点云降采样
-    // 3. 用pose_estimator这个类估计位姿，输出位姿变换后的点云和tf
-    //    位姿估计方法是ukf
+    // 3. 用pose_estimator这个类估计位姿(分有无IMU)，输出位姿变换后的点云和tf
+    // 位姿估计方法是ukf
     points_sub = mt_nh.subscribe("/velodyne_points", 5, &HdlLocalizationNodelet::points_callback, this);
 
     // 全局地图的订阅回调
-    // 1. 完成了全局点云地图的定位
+    // 1. 在pcl::Registration指针中指定了全局地图
     // 2. 如果设置了要重定位，还会调用重定位的服务
     globalmap_sub = nh.subscribe("/globalmap", 1, &HdlLocalizationNodelet::globalmap_callback, this);
 
@@ -246,6 +246,7 @@ private:
     last_scan = filtered;
 
     // TODO:delta估计是滤波中用到的
+    // 维护了一个lastFrame指针，保存点云
     if (relocalizing) {
       delta_estimater->add_frame(filtered);
     }
@@ -253,14 +254,16 @@ private:
     Eigen::Matrix4f before = pose_estimator->matrix();
 
     // predict
-    // TODO:卡尔曼滤波的预测过程
-    // 根据是否有imu，调用predict函数的两个重载
+    // 分为有无IMU两种情况，分别调用predict函数的两个重载
     if (!use_imu) {
+      // 没有imu的情况
+      // 相当于传入了两个0矩阵到predict函数的后两个参数
       pose_estimator->predict(stamp);
     } else {
+      // 有IMU的情况
+      // 遍历两次点云回调之间全部累计的IMU数据，读取IMU的加速度和角速度
       std::lock_guard<std::mutex> lock(imu_data_mutex);
       auto imu_iter = imu_data.begin();
-      // 用imu的数据迭代
       for (imu_iter; imu_iter != imu_data.end(); imu_iter++) {
         // 如果点云的时间戳比imu的时间早，就放弃这个imu数据
         if (stamp < (*imu_iter)->header.stamp) {
@@ -279,7 +282,7 @@ private:
     }
 
     // odometry-based prediction
-    // 基于里程计的预测
+    // 基于里程计的预测,目前的方案应该没有里程计
     ros::Time last_correction_time = pose_estimator->last_correction_time();
     if (private_nh.param<bool>("enable_robot_odometry_prediction", false) && !last_correction_time.isZero()) {
       geometry_msgs::TransformStamped odom_delta;
@@ -433,11 +436,14 @@ private:
 
   /**
    * @brief publish odometry
+   * 维护tf树并发布odom
    * @param stamp  timestamp
    * @param pose   odometry pose to be published
    */
   void publish_odometry(const ros::Time& stamp, const Eigen::Matrix4f& pose) {
-    // broadcast the transform over tf
+    /* 1.维护系统的tf */
+    // 如果存在odom->velodyne的(比如说有一个里程计能发布)
+    // 那么最后发布的tf是map->odom，也就是对普通历程计的一个补偿
     if (tf_buffer.canTransform(robot_odom_frame_id, odom_child_frame_id, ros::Time(0))) {
       geometry_msgs::TransformStamped map_wrt_frame = tf2::eigenToTransform(Eigen::Isometry3d(pose.inverse().cast<double>()));
       map_wrt_frame.header.stamp = stamp;
@@ -448,8 +454,10 @@ private:
       Eigen::Matrix4f frame2odom = tf2::transformToEigen(frame_wrt_odom).cast<float>().matrix();
 
       geometry_msgs::TransformStamped map_wrt_odom;
+      // 把frame_wrt_odom(查tf表)作用在map_wrt_frame(匹配得到的坐标变换)得到map_wrt_odom
       tf2::doTransform(map_wrt_frame, map_wrt_odom, frame_wrt_odom);
 
+      // 得到map->odom
       tf2::Transform odom_wrt_map;
       tf2::fromMsg(map_wrt_odom.transform, odom_wrt_map);
       odom_wrt_map = odom_wrt_map.inverse();
@@ -460,8 +468,12 @@ private:
       odom_trans.header.frame_id = "map";
       odom_trans.child_frame_id = robot_odom_frame_id;
 
-      tf_broadcaster.sendTransform(odom_trans);
-    } else {
+      tf_broadcaster.sendTransform(odom_trans);  // 最后发布的tf是map->odom
+    }
+    // 如果不存在里程计发布(目前的方案)
+    // 最终发布的tf是map->velodyne,也就是直接发布匹配的结果
+    else {
+      // 匹配得到的pose是相对于点云地图的(map坐标系)
       geometry_msgs::TransformStamped odom_trans = tf2::eigenToTransform(Eigen::Isometry3d(pose.cast<double>()));
       odom_trans.header.stamp = stamp;
       odom_trans.header.frame_id = "map";
@@ -469,17 +481,16 @@ private:
       tf_broadcaster.sendTransform(odom_trans);
     }
 
+    /* 2.把odom作为话题发布出去 */
     // publish the transform
     nav_msgs::Odometry odom;
     odom.header.stamp = stamp;
     odom.header.frame_id = "map";
-
     tf::poseEigenToMsg(Eigen::Isometry3d(pose.cast<double>()), odom.pose.pose);
     odom.child_frame_id = odom_child_frame_id;
     odom.twist.twist.linear.x = 0.0;
     odom.twist.twist.linear.y = 0.0;
     odom.twist.twist.angular.z = 0.0;
-
     pose_pub.publish(odom);
   }
 

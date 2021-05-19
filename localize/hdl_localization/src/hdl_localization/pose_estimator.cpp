@@ -49,7 +49,7 @@ PoseEstimator::PoseEstimator(
   Eigen::MatrixXf cov = Eigen::MatrixXf::Identity(16, 16) * 0.01;
   // 建立一个位姿系统
   PoseSystem system;
-  // 初始化ukf
+  // 最重要的:初始化ukf
   ukf.reset(new kkl::alg::UnscentedKalmanFilterX<float, PoseSystem>(system, 16, 6, 7, process_noise, measurement_noise, mean, cov));
 }
 
@@ -57,6 +57,7 @@ PoseEstimator::~PoseEstimator() {}
 
 /**
  * @brief predict
+ * 没有IMU输入的时候的位姿估计方法
  * @param stamp    timestamp
  * @param acc      acceleration
  * @param gyro     angular velocity
@@ -78,26 +79,31 @@ void PoseEstimator::predict(const ros::Time& stamp) {
 
 /**
  * @brief predict
+ * 有IMU输入的时候的位姿估计方法
  * @param stamp    timestamp
  * @param acc      acceleration
  * @param gyro     angular velocity
  */
 void PoseEstimator::predict(const ros::Time& stamp, const Eigen::Vector3f& acc, const Eigen::Vector3f& gyro) {
+  // 1. 当前与初始化的时间间隔小于设置的时间
+  // 2. prev_stamp（上次更新时间）为0（未更新）
+  // 3. prev_stamp等于当前时间
+  // 更新prev_stamp并跳出
   if ((stamp - init_stamp).toSec() < cool_time_duration || prev_stamp.is_zero() || prev_stamp == stamp) {
     prev_stamp = stamp;
     return;
   }
-
+  // 先计算dt，再更新prev_stamp
   double dt = (stamp - prev_stamp).toSec();
   prev_stamp = stamp;
-
+  // 设置ukf的噪声
   ukf->setProcessNoiseCov(process_noise * dt);
   ukf->system.dt = dt;
-
+  // 用imu数据定义控制量
   Eigen::VectorXf control(6);
   control.head<3>() = acc;
   control.tail<3>() = gyro;
-
+  // 用ukf预测
   ukf->predict(control);
 }
 
@@ -138,18 +144,21 @@ void PoseEstimator::predict_odom(const Eigen::Matrix4f& odom_delta) {
 
 /**
  * @brief correct
- * @param cloud   input cloud
+ * @param stamp
+ * @param cloud input cloud
  * @return cloud aligned to the globalmap
  */
 pcl::PointCloud<PoseEstimator::PointT>::Ptr PoseEstimator::correct(const ros::Time& stamp, const pcl::PointCloud<PointT>::ConstPtr& cloud) {
   last_correction_stamp = stamp;
-
   Eigen::Matrix4f no_guess = last_observation;
   Eigen::Matrix4f imu_guess;
   Eigen::Matrix4f odom_guess;
+  // 单位阵初始化
   Eigen::Matrix4f init_guess = Eigen::Matrix4f::Identity();
 
+  // odom相关的先跳过,反正这里就是初始化了init_guess，也就是初始位姿估计
   if (!odom_ukf) {
+    //   没有odom，就用ukf的结果作为初始
     init_guess = imu_guess = matrix();
   } else {
     imu_guess = matrix();
@@ -182,6 +191,8 @@ pcl::PointCloud<PoseEstimator::PointT>::Ptr PoseEstimator::correct(const ros::Ti
     init_guess.block<3, 3>(0, 0) = Eigen::Quaternionf(fused_mean[3], fused_mean[4], fused_mean[5], fused_mean[6]).normalized().toRotationMatrix();
   }
 
+  // 点云的配准,registration是一个指针，之前已经对匹配方法和全局地图的点云初始化过了
+  // 然后初始化pose_estimatior类的时候作为参数传进来了
   pcl::PointCloud<PointT>::Ptr aligned(new pcl::PointCloud<PointT>());
   registration->setInputSource(cloud);
   registration->align(*aligned, init_guess);
@@ -193,14 +204,14 @@ pcl::PointCloud<PoseEstimator::PointT>::Ptr PoseEstimator::correct(const ros::Ti
   if (quat().coeffs().dot(q.coeffs()) < 0.0f) {
     q.coeffs() *= -1.0f;
   }
-
+  // 填充到观测值
   Eigen::VectorXf observation(7);
   observation.middleRows(0, 3) = p;
   observation.middleRows(3, 4) = Eigen::Vector4f(q.w(), q.x(), q.y(), q.z());
   last_observation = trans;
 
   wo_pred_error = no_guess.inverse() * registration->getFinalTransformation();
-
+  // ukf更新
   ukf->correct(observation);
   imu_pred_error = imu_guess.inverse() * registration->getFinalTransformation();
 
