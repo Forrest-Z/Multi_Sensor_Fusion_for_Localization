@@ -1,10 +1,8 @@
-#include "../include/utility.h"
+#include "../include/utility.h" //就是引入了一堆常用的头文件
 
-
-class SimulationJackal{
-
+class SimulationJackal
+{
 private:
-
     ros::NodeHandle nh;
 
     ros::ServiceClient setClient;
@@ -17,10 +15,10 @@ private:
     gazebo_msgs::GetModelState getmodelstate;
 
     tf::TransformBroadcaster tfMap2OdomBroadcaster;
-    
-public:
 
-    SimulationJackal(){
+public:
+    SimulationJackal()
+    {
 
         // Gazebo client
         setClient = nh.serviceClient<gazebo_msgs::SetModelState>("/gazebo/set_model_state");
@@ -37,36 +35,43 @@ public:
         getmodelstate.request.relative_entity_name = "world";
     }
 
-    void run(){
+    void run()
+    {
 
         ros::Rate rate(100);
-
-        while (ros::ok()){
-
+        while (ros::ok())
+        {
             // sleep
             rate.sleep();
 
             // Get tf between odom and base_link
-            try{listener.lookupTransform("odom","base_link", ros::Time(0), transform);}
-            catch (tf::TransformException ex){continue;}
+            try
+            {
+                listener.lookupTransform("odom", "base_link", ros::Time(0), transform);
+            }
+            catch (tf::TransformException ex)
+            {
+                continue;
+            }
+            
+            // tf:odom->lidar(定位节点发布的)
             tf::Transform odom_to_laser(transform.getBasis(), transform.getOrigin());
 
             // get robot pose from Gazebo
             getClient.waitForExistence();
             getClient.call(getmodelstate);
-
-            // get translation
+            // jackal这个model在gazebo中的位置
             double x, y, z;
             x = getmodelstate.response.pose.position.x;
             y = getmodelstate.response.pose.position.y;
             z = getmodelstate.response.pose.position.z;
-
-            // get orientation
+            // jackal这个model这gazebo中的姿态
             geometry_msgs::Quaternion geoQuat = getmodelstate.response.pose.orientation;
             tf::Quaternion tfQuat(geoQuat.x, geoQuat.y, geoQuat.z, geoQuat.w);
-
-            // calculate tf between map and odom
+            // tf:lidar->map(gazebo真值,也就是gazebo中模型相对世界的坐标)
             tf::Transform laser_to_map = tf::Transform(tfQuat, tf::Vector3(x, y, z)).inverse();
+            
+            // tf:map->odom(相当于根据绝对值和定位节点发布的值得到一个补偿,和AMCL的结构类似)
             tf::Transform map_to_odom = (odom_to_laser * laser_to_map).inverse();
 
             // Publish TF (map to odom)
@@ -75,13 +80,11 @@ public:
     }
 };
 
+int main(int argc, char **argv)
+{
 
-
-
-int main(int argc, char** argv){
-    
     ros::init(argc, argv, "jackal_velodyne");
-    
+
     SimulationJackal simJackal;
 
     ROS_INFO("\033[1;32m---->\033[0m Gazebo TF publisher.");

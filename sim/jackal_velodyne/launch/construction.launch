@@ -20,6 +20,7 @@
     <arg name="config" default="$(arg default_config)" />
 
     <!-- Launch Gazebo with the specified world -->
+    <!-- 启动一个gazebo空世界 -->
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
         <arg name="debug" value="0" />
         <arg name="gui" value="$(arg gui)" />
@@ -31,11 +32,12 @@
     <!-- 在空地图里面把地图当成模型加载进去 -->
     <node name="office_world_spawner" pkg="gazebo_ros" type="spawn_model" args="-urdf -model office_geom -param office_geom -x 0 -y 0 -z 0 -Y 0" />
 
-    <!-- 加载模型-->
+    <!-- 查找jackal模型-->
     <param name="robot_description" command="$(find jackal_description)/scripts/env_run
                     $(find jackal_description)/urdf/configs/$(arg config)
                     $(find xacro)/xacro $(find jackal_velodyne)/urdf/jackal_velodyne.urdf.xacro
                     --inorder" />
+    
     <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
 
     <!-- Control -->
@@ -54,6 +56,6 @@
     <node pkg="jackal_velodyne" type="tf_publisher" name="tf_publisher" output="screen"/>
 
     <!-- 动态参数 -->
-    <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="jackal_reconfigure"/>
-    
+    <!-- <node pkg="rqt_reconfigure" type="rqt_reconfigure" name="jackal_reconfigure"/> -->
+
 </launch>
