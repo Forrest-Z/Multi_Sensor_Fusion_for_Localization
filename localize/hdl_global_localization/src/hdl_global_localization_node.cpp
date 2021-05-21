@@ -20,6 +20,10 @@ namespace hdl_global_localization {
 
 class GlobalLocalizationNode {
 public:
+  /**
+   * @brief Construct a new Global Localization Node object
+   * 
+   */
   GlobalLocalizationNode() : nh(), private_nh("~") {
     set_engine(private_nh.param<std::string>("global_localization_engine", "FPFH_RANSAC"));
 

@@ -1,7 +1,3 @@
-/**
- * @file pose_estimator.hpp
- * @brief 点云的回调中使用了pose_estimator这个类估计位姿，其中又使用了ukf作为位姿的结算
- */
 #ifndef POSE_ESTIMATOR_HPP
 #define POSE_ESTIMATOR_HPP
 
@@ -22,8 +18,8 @@ class UnscentedKalmanFilterX;
 
 namespace hdl_localization {
 
-class PoseSystem;
-class OdomSystem;
+class PoseSystem;  // 系统的状态量
+class OdomSystem;  // 里程计相关的状态量
 
 /**
  * @brief scan matchidng-based pose estimator
@@ -94,7 +90,7 @@ private:
   ros::Time init_stamp;             // when the estimator was initialized
   ros::Time prev_stamp;             // when the estimator was updated last time
   ros::Time last_correction_stamp;  // when the estimator performed the correction step
-  double cool_time_duration;        //
+  double cool_time_duration;
 
   Eigen::MatrixXf process_noise;
   std::unique_ptr<kkl::alg::UnscentedKalmanFilterX<float, PoseSystem>> ukf;

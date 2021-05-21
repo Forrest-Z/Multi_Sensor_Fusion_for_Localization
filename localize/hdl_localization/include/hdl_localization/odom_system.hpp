@@ -1,3 +1,8 @@
+/**
+ * @file odom_system.hpp
+ * @brief 定义了里程计的状态参数
+ * 由于本方案没有里程计，这个部分跳过
+ */
 #ifndef ODOM_SYSTEM_HPP
 #define ODOM_SYSTEM_HPP
 

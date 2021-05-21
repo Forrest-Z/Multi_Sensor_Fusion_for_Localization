@@ -1,4 +1,4 @@
-/* 地图服务节点 
+/* 地图服务节点
 读取点云地图文件并降采样
 发布到/globalmap话题，点云地图的frame为/map
 hdl_localization_nodelet会订阅上面的话题并进入回调
@@ -37,7 +37,7 @@ public:
 
     // publish globalmap with "latched" publisher
     globalmap_pub = nh.advertise<sensor_msgs::PointCloud2>("/globalmap", 5, true);
-    // 计数器触发回调函数，现在设置的全局地图按照1hz发布
+    // 全局地图按照1hz发布
     globalmap_pub_timer = nh.createWallTimer(ros::WallDuration(1.0), &GlobalmapServerNodelet::pub_once_cb, this, true, true);
   }
 

@@ -3,24 +3,32 @@
     <!-- arguments -->
     <arg name="nodelet_manager" default="hdl_nodelet_manager" />
     <arg name="points_topic" default="/velodyne_points" />
+    <!-- TODO:直接制定child_frame为imu所在的frame，是否就可以避免imu的外参标定 -->
+    <!-- 目前测试不行，改变了child_frame会影响点云的方向，较好的方法是把点云转到velodyne这个tf下 -->
     <!-- input clouds are transformed in odom_child_frame, and then localization is performed in that frame -->
     <!-- this is useful to match the LIDAR and IMU coodinate systems -->
+    <!-- <arg name="odom_child_frame_id" default="camera4_imu_optical_frame" /> -->
     <arg name="odom_child_frame_id" default="velodyne" />
 
     <!-- optional arguments -->
-    <arg name="use_imu" default="false" />
+    <arg name="use_imu" default="true" />
     <arg name="invert_imu_acc" default="false" />
     <arg name="invert_imu_gyro" default="false" />
     <arg name="use_global_localization" default="true" />
-    <arg name="imu_topic" default="/imu/data" />
+    <arg name="imu_topic" default="/camera4/imu" />
     <arg name="enable_robot_odometry_prediction" value="false" />
     <arg name="robot_odom_frame_id" value="odom" />
-    <arg name="plot_estimation_errors" value="false" />
+    <!-- 打印参数 -->
+    <arg name="plot_estimation_errors" value="true" />
 
+    <!-- 上面是参数配置部分，下面启动了一个launch和若干个nodelet -->
+
+    <!-- 全局定位 -->
     <include file="$(find hdl_global_localization)/launch/hdl_global_localization.launch" if="$(arg use_global_localization)" />
 
     <!-- in case you use velodyne_driver, comment out the following line -->
     <!-- 使用velodyne官方驱动的时候把下面这行注释掉 -->
+    <!-- 应该是nodelet的管理器，一个系统之只能有一个存在 -->
     <node pkg="nodelet" type="nodelet" name="$(arg nodelet_manager)" args="manager" output="screen"/>
 
     <!-- globalmap_server_nodelet -->
@@ -51,7 +59,7 @@
         <!-- available reg_methods: NDT_OMP, NDT_CUDA_P2D, NDT_CUDA_D2D-->
         <param name="reg_method" value="NDT_OMP" />
         <!-- if NDT is slow for your PC, try DIRECT1 serach method, which is a bit unstable but extremely fast -->
-        <param name="ndt_neighbor_search_method" value="DIRECT7" />
+        <param name="ndt_neighbor_search_method" value="DIRECT1" />
         <param name="ndt_neighbor_search_radius" value="2.0" />
         <param name="ndt_resolution" value="1.0" />
         <param name="downsample_resolution" value="0.1" />
@@ -69,9 +77,10 @@
         <param name="use_global_localization" value="$(arg use_global_localization)" />
     </node>
 
-    <node pkg="hdl_localization" type="plot_status.py" name="plot_estimation_errors" if="$(arg plot_estimation_errors)" />
-
     <!-- Rviz -->
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(find hdl_localization)/rviz/construction.rviz" />
+
+    <!-- 可视化误差 -->
+    <node pkg="hdl_localization" type="plot_status.py" name="plot_estimation_errors" if="$(arg plot_estimation_errors)" />
 
 </launch>

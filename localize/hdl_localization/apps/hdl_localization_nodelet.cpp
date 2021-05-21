@@ -41,23 +41,21 @@ public:
   HdlLocalizationNodelet() : tf_buffer(), tf_listener(tf_buffer) {}
   virtual ~HdlLocalizationNodelet() {}
 
-  // 函数的入口,重写了父类里的纯虚函数
+  /**
+   * @brief 节点的入口,重写了父类里的纯虚函数
+   */
   void onInit() override {
     // 三个句柄
     nh = getNodeHandle();
     mt_nh = getMTNodeHandle();
     private_nh = getPrivateNodeHandle();
 
-    // 1. 设置降采样的参数
-    // 2. 设置ndt的匹配方法(返回一个pcl::Registration指针)
-    // 3. 从launch文件设置初始位姿
     initialize_params();
 
     robot_odom_frame_id = private_nh.param<std::string>("robot_odom_frame_id", "robot_odom");
     odom_child_frame_id = private_nh.param<std::string>("odom_child_frame_id", "base_link");
 
-    // imu的回调
-    // 1. 把数据存到对象成员变量里面去,点云回调函数会用到imu数据
+    // imu订阅，注册回调
     use_imu = private_nh.param<bool>("use_imu", true);
     invert_acc = private_nh.param<bool>("invert_acc", false);
     invert_gyro = private_nh.param<bool>("invert_gyro", false);
@@ -66,20 +64,13 @@ public:
       imu_sub = mt_nh.subscribe("/gpsimu_driver/imu_data", 256, &HdlLocalizationNodelet::imu_callback, this);
     }
 
-    // 点云的订阅回调
-    // 1. 把点云转到dom_child_frame上
-    // 2. 点云降采样
-    // 3. 用pose_estimator这个类估计位姿(分有无IMU)，输出位姿变换后的点云和tf
-    // 位姿估计方法是ukf
+    // 激光雷达订阅，注册回调
     points_sub = mt_nh.subscribe("/velodyne_points", 5, &HdlLocalizationNodelet::points_callback, this);
 
-    // 全局地图的订阅回调
-    // 1. 在pcl::Registration指针中指定了全局地图
-    // 2. 如果设置了要重定位，还会调用重定位的服务
+    // 全局地图的订阅，注册回调
     globalmap_sub = nh.subscribe("/globalmap", 1, &HdlLocalizationNodelet::globalmap_callback, this);
 
-    // 初始位姿的订阅回调
-    // 1. 用于rviz划点
+    // rviz给的初始位姿订阅，注册回调
     initialpose_sub = nh.subscribe("/initialpose", 8, &HdlLocalizationNodelet::initialpose_callback, this);
 
     // 发布三个话题
@@ -90,10 +81,9 @@ public:
     aligned_pub = nh.advertise<sensor_msgs::PointCloud2>("/aligned_points", 5, false);
     status_pub = nh.advertise<ScanMatchingStatus>("/status", 5, false);
 
-    // global localization
-    // 如果launch的时候指定了全局重定位
-    // 1. 建立两个service客户端(在globalmap_callback中call)
-    // 2. 发布relocalize服务等待调用(就是我们在终端里面rosservice call )
+    // 如果制定了初始重定位
+    // 1. 建立两个客户端，用于把全局地图发给hdl_global_localization(在globalmap_callback中call)
+    // 2. 建立一个服务端，用于执行重定位(使用者在终端里面rosservice call)
     use_global_localization = private_nh.param<bool>("use_global_localization", true);
     if (use_global_localization) {
       NODELET_INFO_STREAM("wait for global localization services");
@@ -103,11 +93,18 @@ public:
       set_global_map_service = nh.serviceClient<hdl_global_localization::SetGlobalMap>("/hdl_global_localization/set_global_map");
       query_global_localization_service = nh.serviceClient<hdl_global_localization::QueryGlobalLocalization>("/hdl_global_localization/query");
 
+      // 定义重定位服务，被call之后执行relocalize函数
       relocalize_server = nh.advertiseService("/relocalize", &HdlLocalizationNodelet::relocalize, this);
     }
   }
 
 private:
+  /**
+   * @brief Create a registration object
+   * 不调用cuda:使用ndt_omp包实现的多线程ndt匹配方法
+   * 调用cuda:使用fast_gicp包实现的基于cuda多线程匹配方法
+   * @return pcl::Registration<PointT, PointT>::Ptr
+   */
   pcl::Registration<PointT, PointT>::Ptr create_registration() const {
     std::string reg_method = private_nh.param<std::string>("reg_method", "NDT_OMP");
     std::string ndt_neighbor_search_method = private_nh.param<std::string>("ndt_neighbor_search_method", "DIRECT7");
@@ -165,6 +162,13 @@ private:
     return nullptr;
   }
 
+  /**
+   * @brief
+   * 1.设置降采样的滤波器downsample_filter
+   * 2.设置ndt的匹配方法(返回一个pcl::Registration指针)
+   * 3.位全局定位初始化一个帧间匹配里程计(delta)
+   * 4.从launch文件设置初始位姿
+   */
   void initialize_params() {
     // intialize scan matching method
     double downsample_resolution = private_nh.param<double>("downsample_resolution", 0.1);
@@ -200,7 +204,9 @@ private:
 private:
   /**
    * @brief callback for imu data
+   * 把数据存到对象成员变量里面去,点云回调函数会用到imu数据
    * @param imu_msg
+   * @todo 把imu转到velodyne坐标系下面
    */
   void imu_callback(const sensor_msgs::ImuConstPtr& imu_msg) {
     std::lock_guard<std::mutex> lock(imu_data_mutex);
@@ -209,11 +215,14 @@ private:
 
   /**
    * @brief callback for point cloud data
+   * 1.点云转到dom_child_frame上
+   * 2.点云降采样
+   * 3.用pose_estimator这个类估计位姿(分有无IMU)，输出位姿变换后的点云和tf
    * @param points_msg
    */
   void points_callback(const sensor_msgs::PointCloud2ConstPtr& points_msg) {
     std::lock_guard<std::mutex> estimator_lock(pose_estimator_mutex);
-    // 等待位姿估计器初始化
+    // 等待pose_estimator初始化(从launch初始化或者rviz初始化)
     if (!pose_estimator) {
       NODELET_ERROR("waiting for initial pose input!!");
       return;
@@ -223,11 +232,10 @@ private:
       NODELET_ERROR("globalmap has not been received!!");
       return;
     }
-    // ros中点云转为pcl点云
-    const auto& stamp = points_msg->header.stamp;
+    // ros点云转为pcl点云
+    const auto& stamp = points_msg->header.stamp;  // 点云的时间戳
     pcl::PointCloud<PointT>::Ptr pcl_cloud(new pcl::PointCloud<PointT>());
     pcl::fromROSMsg(*points_msg, *pcl_cloud);
-
     if (pcl_cloud->empty()) {
       NODELET_ERROR("cloud is empty!!");
       return;
@@ -245,23 +253,22 @@ private:
     auto filtered = downsample(cloud);
     last_scan = filtered;
 
-    // TODO:delta估计是滤波中用到的
-    // 维护了一个lastFrame指针，保存点云
+    // 如果此时正在重定位，维护一个帧间匹配里程计补偿重定位过程中的移动
     if (relocalizing) {
       delta_estimater->add_frame(filtered);
     }
 
-    Eigen::Matrix4f before = pose_estimator->matrix();
+    // 这before没看到哪里有用
+    // Eigen::Matrix4f before = pose_estimator->matrix();
 
     // predict
-    // 分为有无IMU两种情况，分别调用predict函数的两个重载
     if (!use_imu) {
       // 没有imu的情况
-      // 相当于传入了两个0矩阵到predict函数的后两个参数
+      // 也就是ukf预测阶段的控制量输入为0
       pose_estimator->predict(stamp);
     } else {
       // 有IMU的情况
-      // 遍历两次点云回调之间全部累计的IMU数据，读取IMU的加速度和角速度
+      // 对两次触发点云回调(0.1s)中保存的每一帧IMU数据构造控制量
       std::lock_guard<std::mutex> lock(imu_data_mutex);
       auto imu_iter = imu_data.begin();
       for (imu_iter; imu_iter != imu_data.end(); imu_iter++) {
@@ -269,12 +276,10 @@ private:
         if (stamp < (*imu_iter)->header.stamp) {
           break;
         }
-        const auto& acc = (*imu_iter)->linear_acceleration;
-        const auto& gyro = (*imu_iter)->angular_velocity;
+        const auto& acc = (*imu_iter)->linear_acceleration;  // 加速度
+        const auto& gyro = (*imu_iter)->angular_velocity;    // 角速度
         double acc_sign = invert_acc ? -1.0 : 1.0;
         double gyro_sign = invert_gyro ? -1.0 : 1.0;
-        // imu是预测，点云是观测
-        // TODO:这里predict函数里面又调用了ukf的方法
         pose_estimator->predict((*imu_iter)->header.stamp, acc_sign * Eigen::Vector3f(acc.x, acc.y, acc.z), gyro_sign * Eigen::Vector3f(gyro.x, gyro.y, gyro.z));
       }
       // 删除用过的imu数据
@@ -282,7 +287,7 @@ private:
     }
 
     // odometry-based prediction
-    // 基于里程计的预测,目前的方案应该没有里程计
+    // 基于里程计的预测,目前的方案没用上
     ros::Time last_correction_time = pose_estimator->last_correction_time();
     if (private_nh.param<bool>("enable_robot_odometry_prediction", false) && !last_correction_time.isZero()) {
       geometry_msgs::TransformStamped odom_delta;
@@ -300,30 +305,26 @@ private:
       }
     }
 
-    // correct
-    // TODO:卡尔曼滤波的更新过程
-    // 用pose_estimator来矫正点云
-    // pcl库配准得到一个结果
-    // 获取到结果后利用ukf矫正位姿
+    // correct(用点云匹配的结果作为观测)
+    // 返回匹配后的点云
     auto aligned = pose_estimator->correct(stamp, filtered);
 
-    // 下面的两个if都是保证有订阅的时候才发布匹配后的点云和匹配状态
+    // 发布结果
     if (aligned_pub.getNumSubscribers()) {
       aligned->header.frame_id = "map";
       aligned->header.stamp = cloud->header.stamp;
-      aligned_pub.publish(aligned);
+      aligned_pub.publish(aligned);  // 发布匹配后的点云
     }
     if (status_pub.getNumSubscribers()) {
-      publish_scan_matching_status(points_msg->header, aligned);
+      publish_scan_matching_status(points_msg->header, aligned);  // 发布匹配状态
     }
-
-    // 发布里程计,时间戳为当前帧雷达时间,里程计位姿为ukf校正后位姿
-    // 同时发布从map到odom_child_frame_id的tf
-    publish_odometry(points_msg->header.stamp, pose_estimator->matrix());
+    publish_odometry(points_msg->header.stamp, pose_estimator->matrix());  // 发布里程计
   }
 
   /**
    * @brief callback for globalmap input
+   * 1.在pcl::Registration匹配方法中指定了全局地图
+   * 2.如果设置了重定位，把全局地图通过服务发给hdl_global_localization节点
    * @param points_msg
    */
   void globalmap_callback(const sensor_msgs::PointCloud2ConstPtr& points_msg) {
@@ -349,6 +350,10 @@ private:
 
   /**
    * @brief perform global localization to relocalize the sensor position
+   * 执行重定位
+   * 1.建立帧间里程计delta_estimater防止全局定位时机器人移动
+   * 2.调用全局定位服务
+   * 3.初始化pose_estimator
    * @param
    */
   bool relocalize(std_srvs::EmptyRequest& req, std_srvs::EmptyResponse& res) {
@@ -358,13 +363,14 @@ private:
     }
 
     relocalizing = true;
-    delta_estimater->reset();
-    pcl::PointCloud<PointT>::ConstPtr scan = last_scan;
+    delta_estimater->reset();                            // 重定位开始的时候就把帧间里程计初始化
+    pcl::PointCloud<PointT>::ConstPtr scan = last_scan;  // 把当前时刻的激光雷达扫描保存下来
 
     hdl_global_localization::QueryGlobalLocalization srv;
     pcl::toROSMsg(*scan, srv.request.cloud);
     srv.request.max_num_candidates = 1;
 
+    // 调用hdl_global_localization提供的服务，执行重定位
     if (!query_global_localization_service.call(srv) || srv.response.poses.empty()) {
       relocalizing = false;
       NODELET_INFO_STREAM("global localization failed");
@@ -379,9 +385,13 @@ private:
     NODELET_INFO_STREAM("Error :" << srv.response.errors[0]);
     NODELET_INFO_STREAM("Inlier:" << srv.response.inlier_fractions[0]);
 
+    // 从服务返回的匹配位姿
     Eigen::Isometry3f pose = Eigen::Isometry3f::Identity();
     pose.linear() = Eigen::Quaternionf(result.orientation.w, result.orientation.x, result.orientation.y, result.orientation.z).toRotationMatrix();
     pose.translation() = Eigen::Vector3f(result.position.x, result.position.y, result.position.z);
+    // 返回的位姿是调用服务时刻的scan和全局地图匹配得到
+    // 匹配过程中雷达位姿可能相较于scan发生了delta的变化
+    // 右乘变换，delta是相对于pose坐标系做的变化，而不是map坐标系
     pose = pose * delta_estimater->estimated_delta();
 
     std::lock_guard<std::mutex> lock(pose_estimator_mutex);
@@ -399,6 +409,7 @@ private:
 
   /**
    * @brief callback for initial pose input ("2D Pose Estimate" on rviz)
+   * pose_estimator智能指针初始化成rviz给出的位姿
    * @param pose_msg
    */
   void initialpose_callback(const geometry_msgs::PoseWithCovarianceStampedConstPtr& pose_msg) {
@@ -406,8 +417,7 @@ private:
     std::lock_guard<std::mutex> lock(pose_estimator_mutex);
     const auto& p = pose_msg->pose.pose.position;
     const auto& q = pose_msg->pose.pose.orientation;
-    // 智能指针指向new出来的的这个位姿
-    // 也就是rviz画出来
+    // rviz中给出的位姿 z==0
     pose_estimator.reset(new hdl_localization::PoseEstimator(
       registration,
       ros::Time::now(),
@@ -436,12 +446,13 @@ private:
 
   /**
    * @brief publish odometry
-   * 维护tf树并发布odom
+   * 1.发布odom话题,时间戳为当前帧雷达时间,里程计位姿为ukf校正后位姿
+   * 2.发布从map到odom_child_frame_id的tf
    * @param stamp  timestamp
    * @param pose   odometry pose to be published
    */
   void publish_odometry(const ros::Time& stamp, const Eigen::Matrix4f& pose) {
-    /* 1.维护系统的tf */
+    // 1.维护系统的tf
     // 如果存在odom->velodyne的(比如说有一个里程计能发布)
     // 那么最后发布的tf是map->odom，也就是对普通历程计的一个补偿
     if (tf_buffer.canTransform(robot_odom_frame_id, odom_child_frame_id, ros::Time(0))) {
@@ -481,7 +492,7 @@ private:
       tf_broadcaster.sendTransform(odom_trans);
     }
 
-    /* 2.把odom作为话题发布出去 */
+    // 2.把odom作为话题发布出去
     // publish the transform
     nav_msgs::Odometry odom;
     odom.header.stamp = stamp;
@@ -499,10 +510,10 @@ private:
    */
   void publish_scan_matching_status(const std_msgs::Header& header, pcl::PointCloud<pcl::PointXYZI>::ConstPtr aligned) {
     ScanMatchingStatus status;
-    status.header = header;
 
-    status.has_converged = registration->hasConverged();
-    status.matching_error = registration->getFitnessScore();
+    status.header = header;                                   // 时间戳
+    status.has_converged = registration->hasConverged();      //是否收敛
+    status.matching_error = registration->getFitnessScore();  // 匹配的误差
 
     const double max_correspondence_dist = 0.5;
 
