@@ -22,11 +22,15 @@ class GlobalLocalizationNode {
 public:
   /**
    * @brief Construct a new Global Localization Node object
-   * 
    */
   GlobalLocalizationNode() : nh(), private_nh("~") {
+    // 通过engine指针指向不同搜索方法
+    // GlobalLocalizationEngine是一个纯虚类，定义了set_global_map和query两个接口
     set_engine(private_nh.param<std::string>("global_localization_engine", "FPFH_RANSAC"));
-
+    // 添加三个服务
+    // 1.设置搜索方法
+    // 2.设置全局地图
+    // 3.设置输入的点云
     set_engine_server = private_nh.advertiseService("set_engine", &GlobalLocalizationNode::set_engine, this);
     set_global_map_server = private_nh.advertiseService("set_global_map", &GlobalLocalizationNode::set_global_map, this);
     query_server = private_nh.advertiseService("query", &GlobalLocalizationNode::query, this);
@@ -42,6 +46,10 @@ private:
     return filtered;
   }
 
+  /**
+   * @brief 设置engine object
+   * @param engine_name
+   */
   bool set_engine(const std::string& engine_name) {
     if (engine_name == "BBS") {
       engine.reset(new GlobalLocalizationBBS(private_nh));
@@ -65,11 +73,17 @@ private:
     return true;
   }
 
+  /**
+   * @brief 服务器，设置engine object
+   */
   bool set_engine(SetGlobalLocalizationEngine::Request& req, SetGlobalLocalizationEngine::Response& res) {
     ROS_INFO_STREAM("Set Global Localization Engine");
     return set_engine(req.engine_name.data);
   }
 
+  /**
+   * @brief 服务器，设置点云地图
+   */
   bool set_global_map(SetGlobalMapRequest& req, SetGlobalMapResponse& res) {
     ROS_INFO_STREAM("Global Map Received");
 
@@ -86,19 +100,24 @@ private:
     return true;
   }
 
+  /**
+   * @brief 服务器，传输待匹配的点云执行全局定位
+   */
   bool query(QueryGlobalLocalizationRequest& req, QueryGlobalLocalizationResponse& res) {
     ROS_INFO_STREAM("Query Global Localization");
     if (global_map == nullptr) {
       ROS_WARN_STREAM("No Globalmap");
       return false;
     }
-
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+    // 把请求消息的点云降采样
     pcl::fromROSMsg(req.cloud, *cloud);
     cloud = downsample(cloud, private_nh.param<double>("query_downsample_resolution", 0.5));
 
+    // 定位执行
     auto results = engine->query(cloud, req.max_num_candidates);
 
+    // 从results封装回复消息
     res.inlier_fractions.resize(results.results.size());
     res.errors.resize(results.results.size());
     res.poses.resize(results.results.size());

@@ -9,6 +9,7 @@ namespace hdl_global_localization {
 
 class BBSLocalization;
 
+// BBS子类，重写了基类的接口函数
 class GlobalLocalizationBBS : public GlobalLocalizationEngine {
 public:
   GlobalLocalizationBBS(ros::NodeHandle& private_nh);
@@ -19,7 +20,9 @@ public:
   virtual GlobalLocalizationResults query(pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud, int max_num_candidates) override;
 
 private:
+  // 在标准库容器里面使用Eigen的元素，需要指定使用eigen的内存分配器
   using Points2D = std::vector<Eigen::Vector2f, Eigen::aligned_allocator<Eigen::Vector2f>>;
+  
   Points2D slice(const pcl::PointCloud<pcl::PointXYZ>& cloud, double min_z, double max_z) const;
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr unslice(const Points2D& points);

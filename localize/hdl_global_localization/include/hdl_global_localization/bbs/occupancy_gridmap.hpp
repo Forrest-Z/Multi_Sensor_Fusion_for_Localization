@@ -9,6 +9,9 @@
 
 namespace hdl_global_localization {
 
+/**
+ * @brief 对opencv的mat添加封装，设计成栅格地图的格式
+ */
 class OccupancyGridMap {
 public:
   using Ptr = std::shared_ptr<OccupancyGridMap>;

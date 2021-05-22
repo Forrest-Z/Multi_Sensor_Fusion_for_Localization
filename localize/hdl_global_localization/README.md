@@ -21,6 +21,13 @@
 
 ## Algorithms
 
+提供的三种搜索引擎
+
+- BBS
+  - 基于二位地图的分支定界搜索方法
+- FPFH + RANSAC
+- FPFH + Teaser++
+
 - 2D Grid Map-based Branch-and-Bound Search
   - Real-time loop closure in 2D LIDAR SLAM, ICRA, 2016
 - FPFH + RANSAC (based on pcl::SampleConsensusPrerejective)
