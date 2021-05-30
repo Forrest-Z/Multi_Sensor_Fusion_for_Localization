@@ -47,9 +47,7 @@ public:
   }
 
   // observation equation
-  VectorXt h(const VectorXt& state) const {
-    return state;
-  }
+  VectorXt h(const VectorXt& state) const { return state; }
 };
 
 }  // namespace hdl_localization

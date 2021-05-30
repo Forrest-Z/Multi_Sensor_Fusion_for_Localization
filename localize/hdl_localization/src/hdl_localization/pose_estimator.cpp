@@ -28,6 +28,7 @@ PoseEstimator::PoseEstimator(
   last_observation.block<3, 3>(0, 0) = quat.toRotationMatrix();
   last_observation.block<3, 1>(0, 3) = pos;
   // 过程噪声矩阵初始化，后面还要乘以间隔时间再传入ukf(Q矩阵)
+  // TODO:需要调参
   process_noise = Eigen::MatrixXf::Identity(16, 16);
   process_noise.middleRows(0, 3) *= 1.0;
   process_noise.middleRows(3, 3) *= 1.0;
@@ -35,6 +36,7 @@ PoseEstimator::PoseEstimator(
   process_noise.middleRows(10, 3) *= 1e-6;
   process_noise.middleRows(13, 3) *= 1e-6;
   // 观测噪声初始化(R矩阵)
+  // TODO:需要调参
   Eigen::MatrixXf measurement_noise = Eigen::MatrixXf::Identity(7, 7);
   measurement_noise.middleRows(0, 3) *= 0.01;
   measurement_noise.middleRows(3, 4) *= 0.001;
@@ -108,13 +110,18 @@ void PoseEstimator::predict(const ros::Time& stamp, const Eigen::Vector3f& acc, 
 
 /**
  * @brief update the state of the odomety-based pose estimation
+ * @param odom_delta   
  * @todo 这个借口可以扩展出其他的融合形式
+ * @attention odom的系统状态量和imu系统的不一样
  */
 void PoseEstimator::predict_odom(const Eigen::Matrix4f& odom_delta) {
+  // 初始化一个使用odom系统状态量的卡尔曼滤波智能指针
   if (!odom_ukf) {
+    // 两个误差矩阵
     Eigen::MatrixXf odom_process_noise = Eigen::MatrixXf::Identity(7, 7);
     Eigen::MatrixXf odom_measurement_noise = Eigen::MatrixXf::Identity(7, 7) * 1e-3;
 
+    // 均值和协方差矩阵初值
     Eigen::VectorXf odom_mean(7);
     odom_mean.block<3, 1>(0, 0) = Eigen::Vector3f(ukf->mean[0], ukf->mean[1], ukf->mean[2]);
     odom_mean.block<4, 1>(3, 0) = Eigen::Vector4f(ukf->mean[6], ukf->mean[7], ukf->mean[8], ukf->mean[9]);
@@ -130,6 +137,7 @@ void PoseEstimator::predict_odom(const Eigen::Matrix4f& odom_delta) {
     quat.coeffs() *= -1.0f;
   }
 
+  // 控制量
   Eigen::VectorXf control(7);
   control.middleRows(0, 3) = odom_delta.block<3, 1>(0, 3);
   control.middleRows(3, 4) = Eigen::Vector4f(quat.w(), quat.x(), quat.y(), quat.z());
@@ -208,7 +216,7 @@ pcl::PointCloud<PoseEstimator::PointT>::Ptr PoseEstimator::correct(const ros::Ti
   Eigen::VectorXf observation(7);
   observation.middleRows(0, 3) = p;
   observation.middleRows(3, 4) = Eigen::Vector4f(q.w(), q.x(), q.y(), q.z());
-  last_observation = trans; // 保存上一次观测结果
+  last_observation = trans;  // 保存上一次观测结果
 
   // TODO:这两个erro干啥的
   wo_pred_error = no_guess.inverse() * registration->getFinalTransformation();

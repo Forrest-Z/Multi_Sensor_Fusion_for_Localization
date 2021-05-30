@@ -58,11 +58,11 @@ public:
     measurement_noise(measurement_noise),
     lambda(1),
     normal_dist(0.0, 1.0) {
-    weights.resize(S, 1);
-    sigma_points.resize(S, N);
-    ext_weights.resize(2 * (N + K) + 1, 1);
-    ext_sigma_points.resize(2 * (N + K) + 1, N + K);
-    expected_measurements.resize(2 * (N + K) + 1, K);
+    weights.resize(S, 1);                              // 33*1
+    sigma_points.resize(S, N);                         // 33*16
+    ext_weights.resize(2 * (N + K) + 1, 1);            // 47*1
+    ext_sigma_points.resize(2 * (N + K) + 1, N + K);   // 47*23
+    expected_measurements.resize(2 * (N + K) + 1, K);  // 47*7
 
     // initialize weights for unscented filter
     weights[0] = lambda / (N + lambda);
@@ -78,8 +78,7 @@ public:
   }
 
   /**
-   * @brief predict
-   * 没有IMU的时候预测更新系统的状态量
+   * @brief predict 没有IMU的时候预测更新系统的状态量
    * 注释内容同predict(const VectorXt& control)
    */
   void predict() {
@@ -113,24 +112,24 @@ public:
   }
 
   /**
-   * @brief predict
-   * 有IMU的时候更新系统的状态
+   * @brief predict 有IMU的时候预测更新系统的状态
    * @param control  传入的一帧IMU数据
+   * @todo 为什么predict没有把状态量和运动噪声合成一个增广状态量?
    */
   void predict(const VectorXt& control) {
     // calculate sigma points
-    ensurePositiveFinite(cov);  // 确保cov正定确保可以取逆
-    computeSigmaPoints(mean, cov, sigma_points);
+    ensurePositiveFinite(cov);                    // 确保cov正定确保可以取逆
+    computeSigmaPoints(mean, cov, sigma_points);  // 得到sigma_points
     // sigma点 和 控制量 代入状态传递函数f计算新时刻的分布
     for (int i = 0; i < S; i++) {
-      sigma_points.row(i) = system.f(sigma_points.row(i), control);
+      sigma_points.row(i) = system.f(sigma_points.row(i), control);  // 采样分布和控制量输入传递函数
     }
 
     // 过程噪声
     const auto& R = process_noise;
 
     // unscented transform
-    // 将转化后的sigmapoint重新组合成预测置信度
+    // 根据状态迁移后的sigma_points计算均值和协方差
     VectorXt mean_pred(mean.size());
     MatrixXt cov_pred(cov.rows(), cov.cols());
     mean_pred.setZero();
@@ -152,46 +151,42 @@ public:
   }
 
   /**
-   * @brief correct
+   * @brief correct 根据ndt的测量更新系统状态
    * @param measurement  measurement vector
    */
   void correct(const VectorXt& measurement) {
     // create extended state space which includes error variances
-    // 建立增广矩阵
-    // N-状态方程维度 K-观测维度
+    // 根据预测的状态建立增广矩阵 N-状态方程维度 K-观测维度
     VectorXt ext_mean_pred = VectorXt::Zero(N + K, 1);
     MatrixXt ext_cov_pred = MatrixXt::Zero(N + K, N + K);
     ext_mean_pred.topLeftCorner(N, 1) = VectorXt(mean);        // 扩展状态量前N项为mean
-    ext_cov_pred.topLeftCorner(N, N) = MatrixXt(cov);          // 扩展协方差左上角为N*N的cov，
-    ext_cov_pred.bottomRightCorner(K, K) = measurement_noise;  //右下角为K*K的观测噪声
+    ext_cov_pred.topLeftCorner(N, N) = MatrixXt(cov);          // 扩展协方差左上角为N*N的cov
+    ext_cov_pred.bottomRightCorner(K, K) = measurement_noise;  // 扩展协方差右下角为K*K的观测噪声
 
+    // 计算ext_sigma_points
     ensurePositiveFinite(ext_cov_pred);
-
-    // 拟合状态扩增后的均值与协方差
     computeSigmaPoints(ext_mean_pred, ext_cov_pred, ext_sigma_points);
 
     // unscented transform
-    // ut变换拟合测量的均值和协方差
+    // 对每个sigma点的状态做观测转换，并叠加观测噪声
     expected_measurements.setZero();
     for (int i = 0; i < ext_sigma_points.rows(); i++) {
       expected_measurements.row(i) = system.h(ext_sigma_points.row(i).transpose().topLeftCorner(N, 1));
       expected_measurements.row(i) += VectorXt(ext_sigma_points.row(i).transpose().bottomRightCorner(K, 1));
     }
 
-    // expected是7维的测量值，也就是用sigma点拟合的测量分布
+    // 均值
     VectorXt expected_measurement_mean = VectorXt::Zero(K);
     for (int i = 0; i < ext_sigma_points.rows(); i++) {
       expected_measurement_mean += ext_weights[i] * expected_measurements.row(i);
     }
-    //测量的协方差矩阵
+    // 协方差
     MatrixXt expected_measurement_cov = MatrixXt::Zero(K, K);
     for (int i = 0; i < ext_sigma_points.rows(); i++) {
       VectorXt diff = expected_measurements.row(i).transpose() - expected_measurement_mean;
       expected_measurement_cov += ext_weights[i] * diff * diff.transpose();
     }
     // calculated transformed covariance
-    // 转换方差，用于计算sigma
-    // 这里的23*7的sigma矩阵就是状态扩增后的P(k|k+1)
     MatrixXt sigma = MatrixXt::Zero(N + K, K);
     for (int i = 0; i < ext_sigma_points.rows(); i++) {
       auto diffA = (ext_sigma_points.row(i).transpose() - ext_mean_pred);

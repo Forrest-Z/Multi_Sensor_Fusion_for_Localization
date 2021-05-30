@@ -287,13 +287,17 @@ private:
     }
 
     // odometry-based prediction
-    // 基于里程计的预测,目前的方案没用上
+    // TODO:基于里程计的预测,目前的方案没用上
+    // @BUG:查询tf的地方存在问题
     ros::Time last_correction_time = pose_estimator->last_correction_time();
     if (private_nh.param<bool>("enable_robot_odometry_prediction", false) && !last_correction_time.isZero()) {
       geometry_msgs::TransformStamped odom_delta;
       if (tf_buffer.canTransform(odom_child_frame_id, last_correction_time, odom_child_frame_id, stamp, robot_odom_frame_id, ros::Duration(0.1))) {
         odom_delta = tf_buffer.lookupTransform(odom_child_frame_id, last_correction_time, odom_child_frame_id, stamp, robot_odom_frame_id, ros::Duration(0));
-      } else if (tf_buffer.canTransform(odom_child_frame_id, last_correction_time, odom_child_frame_id, ros::Time(0), robot_odom_frame_id, ros::Duration(0))) {
+      } 
+      // ros::Time(0)指的buffer中最新时刻的数据
+      // canTransform是因为buffer中的数据有延迟，阻塞等待
+      else if (tf_buffer.canTransform(odom_child_frame_id, last_correction_time, odom_child_frame_id, ros::Time(0), robot_odom_frame_id, ros::Duration(0))) {
         odom_delta = tf_buffer.lookupTransform(odom_child_frame_id, last_correction_time, odom_child_frame_id, ros::Time(0), robot_odom_frame_id, ros::Duration(0));
       }
 
