@@ -28,8 +28,10 @@ struct GlobalLocalizationResults {
 
     std::cout << "valid solutions:" << results.size() << std::endl;
 
+    // 按照results的成员值排序
     // std::sort(results.begin(), results.end(), [](const auto& lhs, const auto& rhs) { return lhs->error < rhs->error; });
     std::sort(results.begin(), results.end(), [](const auto& lhs, const auto& rhs) { return lhs->inlier_fraction > rhs->inlier_fraction; });
+    // 只保留max_num_candidates(1)个结果
     if (results.size() > max_num_candidates) {
       results.erase(results.begin() + max_num_candidates, results.end());
     }

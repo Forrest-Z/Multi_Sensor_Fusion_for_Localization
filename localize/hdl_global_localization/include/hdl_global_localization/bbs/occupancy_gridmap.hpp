@@ -26,6 +26,7 @@ public:
     values = cv::Mat1f(height, width, 0.0f);
   }
 
+  // getter
   double grid_resolution() const { return resolution; }
   int width() const { return values.cols; }
   int height() const { return values.rows; }
@@ -57,6 +58,7 @@ public:
     return sum_dists;
   }
 
+  // 金字塔式按照分辨率搜索
   OccupancyGridMap::Ptr pyramid_up() const {
     cv::Mat1f small_map(values.rows / 2, values.cols / 2);
     for (int i = 0; i < values.rows / 2; i++) {

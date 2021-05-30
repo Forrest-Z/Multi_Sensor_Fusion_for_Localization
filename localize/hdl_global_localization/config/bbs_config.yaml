@@ -10,8 +10,8 @@ bbs/max_theta: 3.15
 
 # global map config
 # slice height range (map coordinate)
-bbs/map_min_z: 2.0
-bbs/map_max_z: 2.4
+bbs/map_min_z: -2
+bbs/map_max_z: 2
 # 2D map params
 bbs/map_width: 512
 bbs/map_height: 1024

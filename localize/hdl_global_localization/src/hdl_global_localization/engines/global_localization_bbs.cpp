@@ -17,7 +17,7 @@ GlobalLocalizationBBS::GlobalLocalizationBBS(ros::NodeHandle& private_nh) : priv
 GlobalLocalizationBBS ::~GlobalLocalizationBBS() {}
 
 /**
- * @brief 把全局地图按照z参数投影到
+ * @brief 把全局地图按照z参数投影到平面
  *
  * @param cloud
  */
@@ -70,7 +70,7 @@ GlobalLocalizationResults GlobalLocalizationBBS::query(pcl::PointCloud<pcl::Poin
   // 把激光雷达的扫描投影到2d平面上
   auto scan_2d = slice(*cloud, scan_min_z, scan_max_z);
 
-  std::vector<GlobalLocalizationResult::Ptr> results;
+  std::vector<GlobalLocalizationResult::Ptr> results;  // 数组元素是封装好的结构体
 
   ROS_INFO_STREAM("Query " << scan_2d.size() << " points");
   if (scan_2d.size() < 32) {
@@ -80,7 +80,7 @@ GlobalLocalizationResults GlobalLocalizationBBS::query(pcl::PointCloud<pcl::Poin
   }
 
   double best_score = 0.0;
-  auto trans_2d = bbs->localize(scan_2d, 0.0, &best_score);
+  auto trans_2d = bbs->localize(scan_2d, 0.0, &best_score);  // 执行定位
   if (trans_2d == boost::none) {
     return GlobalLocalizationResults(results);
   }
@@ -112,7 +112,7 @@ GlobalLocalizationResults GlobalLocalizationBBS::query(pcl::PointCloud<pcl::Poin
 GlobalLocalizationBBS::Points2D GlobalLocalizationBBS::slice(const pcl::PointCloud<pcl::PointXYZ>& cloud, double min_z, double max_z) const {
   Points2D points_2d;
   points_2d.reserve(cloud.size());
-  // 遍历，然后忽略z值保存起来
+  // 遍历，然后忽略z值保存到2d点容器
   for (int i = 0; i < cloud.size(); i++) {
     if (min_z < cloud.at(i).z && cloud.at(i).z < max_z) {
       points_2d.push_back(cloud.at(i).getVector3fMap().head<2>());
@@ -122,7 +122,7 @@ GlobalLocalizationBBS::Points2D GlobalLocalizationBBS::slice(const pcl::PointClo
 }
 
 /**
- * @brief 从二维点生成pcl的点云(z=0)
+ * @brief 从2d生成3d的pcl格式点云(填充z=0)
  * @param points
  * @return pcl::PointCloud<pcl::PointXYZ>::Ptr
  */

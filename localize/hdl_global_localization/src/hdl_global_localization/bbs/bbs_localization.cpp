@@ -86,6 +86,14 @@ void BBSLocalization::set_map(const BBSLocalization::Points& map_points, double 
   }
 }
 
+/**
+ * @brief 在slice之后的二维地图上面全局定位
+ *
+ * @param scan_points 二维扫描
+ * @param min_score
+ * @param best_score
+ * @return boost::optional<Eigen::Isometry2f> 3x2的矩阵
+ */
 boost::optional<Eigen::Isometry2f> BBSLocalization::localize(const BBSLocalization::Points& scan_points, double min_score, double* best_score) {
   theta_resolution = std::acos(1 - std::pow(gridmap_pyramid[0]->grid_resolution(), 2) / (2 * std::pow(params.max_range, 2)));
 
@@ -98,6 +106,8 @@ boost::optional<Eigen::Isometry2f> BBSLocalization::localize(const BBSLocalizati
   auto trans_queue = create_init_transset(scan_points);
 
   ROS_INFO_STREAM("Branch-and-Bound");
+  // 实现了分支定界的搜索方法
+
   while (!trans_queue.empty()) {
     // std::cout << trans_queue.size() << std::endl;
 
@@ -155,6 +165,7 @@ std::priority_queue<DiscreteTransformation> BBSLocalization::create_init_transse
 
   ROS_INFO_STREAM("Initial transformation set size:" << transset.size());
 
+// omp多线程加速
 #pragma omp parallel for
   for (int i = 0; i < transset.size(); i++) {
     auto& trans = transset[i];
