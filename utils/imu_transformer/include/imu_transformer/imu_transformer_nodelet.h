@@ -18,7 +18,7 @@ namespace imu_transformer
   typedef sensor_msgs::Imu ImuMsg;
   typedef sensor_msgs::MagneticField MagMsg;
   typedef message_filters::Subscriber<ImuMsg> ImuSubscriber;
-//  typedef message_filters::Subscriber<MagMsg> MagSubscriber;
+  //  typedef message_filters::Subscriber<MagMsg> MagSubscriber;
   typedef message_filters::Subscriber<topic_tools::ShapeShifter> MagSubscriber;
   typedef tf2_ros::MessageFilter<ImuMsg> ImuFilter;
   typedef tf2_ros::MessageFilter<MagMsg> MagFilter;
@@ -27,10 +27,9 @@ namespace imu_transformer
   {
 
   public:
-    ImuTransformerNodelet() {};
+    ImuTransformerNodelet(){};
 
   private:
-
     std::string target_frame_;
 
     ros::NodeHandle nh_in_, nh_out_, private_nh_;
@@ -47,12 +46,11 @@ namespace imu_transformer
 
     virtual void onInit();
     void imuCallback(const ImuMsg::ConstPtr &imu_in);
-//    void magCallback(const MagMsg::ConstPtr &mag_in);
+    //    void magCallback(const MagMsg::ConstPtr &mag_in);
     void magCallback(const topic_tools::ShapeShifter::ConstPtr &msg);
     void failureCb(tf2_ros::filter_failure_reasons::FilterFailureReason reason);
-
   };
 
-}  // namespace imu_transformer
+} // namespace imu_transformer
 
-#endif  // IMU_TRANSFORMER_IMU_TRANSFORMER_NODELET
+#endif // IMU_TRANSFORMER_IMU_TRANSFORMER_NODELET

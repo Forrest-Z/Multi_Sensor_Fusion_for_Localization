@@ -18,6 +18,8 @@ namespace alg {
  * @param T        scaler type
  * @param System   system class to be estimated
  */
+
+// 模板类，可以自定义不同的位姿系统
 template <typename T, class System>
 class UnscentedKalmanFilterX {
   typedef Eigen::Matrix<T, Eigen::Dynamic, 1> VectorXt;

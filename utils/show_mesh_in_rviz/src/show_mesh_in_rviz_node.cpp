@@ -33,11 +33,11 @@ int main(int argc, char **argv)
         marker.color.r = 0.0f;
         marker.color.g = 1.0f;
         marker.color.b = 0.0f;
-        marker.color.a = 0.5;
+        marker.color.a = 0.6;
 
         marker.lifetime = ros::Duration();
 
-        marker.mesh_resource = "package://show_mesh_in_rviz/stl/floor6_2.stl";
+        marker.mesh_resource = "package://show_mesh_in_rviz/stl/6_v2.stl";
         marker_pub.publish(marker);
 
         rate.sleep();

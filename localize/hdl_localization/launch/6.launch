@@ -16,6 +16,7 @@
     <arg name="enable_robot_odometry_prediction" value="false" />
     <arg name="robot_odom_frame_id" value="odom" />
     <arg name="plot_estimation_errors" value="false" />
+    <arg name="show_mesh_in_rviz" default="true" />
 
     <include file="$(find hdl_global_localization)/launch/hdl_global_localization.launch" if="$(arg use_global_localization)" />
 
@@ -26,7 +27,7 @@
     <!-- globalmap_server_nodelet -->
     <node pkg="nodelet" type="nodelet" name="globalmap_server_nodelet" args="load hdl_localization/GlobalmapServerNodelet $(arg nodelet_manager)">
         <!-- 点云地图路径 -->
-        <param name="globalmap_pcd" value="$(find hdl_localization)/data/6_from_mesh.pcd" />
+        <param name="globalmap_pcd" value="$(find hdl_localization)/data/6_from_mesh_v1.pcd" />
         <!-- <param name="globalmap_pcd" value="$(find hdl_localization)/data/6_clean_downsample_align_to_mesh.pcd" /> -->
         <param name="convert_utm_to_local" value="true" />
         <param name="downsample_resolution" value="0.1" />
@@ -73,5 +74,6 @@
 
     <!-- Rviz -->
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(find hdl_localization)/rviz/construction.rviz" />
-
+<!-- 加载建筑物模型 -->
+    <node pkg="show_mesh_in_rviz" type="show_mesh_in_rviz_node" name="show_mesh_in_rviz_node" if="$(arg show_mesh_in_rviz)" />
 </launch>

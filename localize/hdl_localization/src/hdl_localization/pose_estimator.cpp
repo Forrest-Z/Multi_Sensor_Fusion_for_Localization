@@ -51,6 +51,7 @@ PoseEstimator::PoseEstimator(
   Eigen::MatrixXf cov = Eigen::MatrixXf::Identity(16, 16) * 0.01;
   PoseSystem system;
   // 最重要的:初始化ukf
+  // ukf是类模板，这里指定了模板参数system为PoseSystem
   ukf.reset(new kkl::alg::UnscentedKalmanFilterX<float, PoseSystem>(system, 16, 6, 7, process_noise, measurement_noise, mean, cov));
 }
 
@@ -99,6 +100,7 @@ void PoseEstimator::predict(const ros::Time& stamp, const Eigen::Vector3f& acc, 
   prev_stamp = stamp;
   // 设置ukf的Q矩阵
   ukf->setProcessNoiseCov(process_noise * dt);
+  // 设置采样时间
   ukf->system.dt = dt;
   // 用imu数据构造控制量
   Eigen::VectorXf control(6);
@@ -110,7 +112,7 @@ void PoseEstimator::predict(const ros::Time& stamp, const Eigen::Vector3f& acc, 
 
 /**
  * @brief update the state of the odomety-based pose estimation
- * @param odom_delta   
+ * @param odom_delta
  * @todo 这个借口可以扩展出其他的融合形式
  * @attention odom的系统状态量和imu系统的不一样
  */
@@ -127,6 +129,7 @@ void PoseEstimator::predict_odom(const Eigen::Matrix4f& odom_delta) {
     odom_mean.block<4, 1>(3, 0) = Eigen::Vector4f(ukf->mean[6], ukf->mean[7], ukf->mean[8], ukf->mean[9]);
     Eigen::MatrixXf odom_cov = Eigen::MatrixXf::Identity(7, 7) * 1e-2;
 
+    // odom和pose的系统状态量不同，传给ukf类模板system参数不同
     OdomSystem odom_system;
     odom_ukf.reset(new kkl::alg::UnscentedKalmanFilterX<float, OdomSystem>(odom_system, 7, 7, 7, odom_process_noise, odom_measurement_noise, odom_mean, odom_cov));
   }
@@ -201,6 +204,7 @@ pcl::PointCloud<PoseEstimator::PointT>::Ptr PoseEstimator::correct(const ros::Ti
   }
 
   // 点云的配准,registration指针已经指定了匹配方法和目标全局地图
+  // 注意这里得到的结果是相对于点云地图坐标系的，也就是观测结果是一个全局坐标
   pcl::PointCloud<PointT>::Ptr aligned(new pcl::PointCloud<PointT>());  // 匹配后的点云
   registration->setInputSource(cloud);
   registration->align(*aligned, init_guess);

@@ -41,9 +41,7 @@ public:
   HdlLocalizationNodelet() : tf_buffer(), tf_listener(tf_buffer) {}
   virtual ~HdlLocalizationNodelet() {}
 
-  /**
-   * @brief 节点的入口,重写了父类里的纯虚函数
-   */
+  // 节点的入口,重写了父类里的纯虚函数
   void onInit() override {
     // 三个句柄
     nh = getNodeHandle();
@@ -263,8 +261,7 @@ private:
 
     // predict
     if (!use_imu) {
-      // 没有imu的情况
-      // 也就是ukf预测阶段的控制量输入为0
+      // 没有imu的情况，ukf预测阶段的控制量为0
       pose_estimator->predict(stamp);
     } else {
       // 有IMU的情况
@@ -287,17 +284,18 @@ private:
     }
 
     // odometry-based prediction
-    // TODO:基于里程计的预测,目前的方案没用上
-    // @BUG:查询tf的地方存在问题
+    // TODO:基于里程计的预测，添加视觉里程计作为预测
     ros::Time last_correction_time = pose_estimator->last_correction_time();
     if (private_nh.param<bool>("enable_robot_odometry_prediction", false) && !last_correction_time.isZero()) {
       geometry_msgs::TransformStamped odom_delta;
+      // TODO:经过测试，这种查询tf的方式是返回的是odom_child_frame_id在robot_odom_frame_id下的坐标
+      // last_correction_time:上一帧点云的时间
+      // stamp:当前帧点云的时间
+      // ros::Time(0):tf_buffer中最新时刻的数据
+      // canTransform是因为buffer中的数据有延迟，阻塞等待
       if (tf_buffer.canTransform(odom_child_frame_id, last_correction_time, odom_child_frame_id, stamp, robot_odom_frame_id, ros::Duration(0.1))) {
         odom_delta = tf_buffer.lookupTransform(odom_child_frame_id, last_correction_time, odom_child_frame_id, stamp, robot_odom_frame_id, ros::Duration(0));
-      } 
-      // ros::Time(0)指的buffer中最新时刻的数据
-      // canTransform是因为buffer中的数据有延迟，阻塞等待
-      else if (tf_buffer.canTransform(odom_child_frame_id, last_correction_time, odom_child_frame_id, ros::Time(0), robot_odom_frame_id, ros::Duration(0))) {
+      } else if (tf_buffer.canTransform(odom_child_frame_id, last_correction_time, odom_child_frame_id, ros::Time(0), robot_odom_frame_id, ros::Duration(0))) {
         odom_delta = tf_buffer.lookupTransform(odom_child_frame_id, last_correction_time, odom_child_frame_id, ros::Time(0), robot_odom_frame_id, ros::Duration(0));
       }
 
@@ -516,7 +514,7 @@ private:
     ScanMatchingStatus status;
 
     status.header = header;                                   // 时间戳
-    status.has_converged = registration->hasConverged();      //是否收敛
+    status.has_converged = registration->hasConverged();      // 是否收敛
     status.matching_error = registration->getFitnessScore();  // 匹配的误差
 
     const double max_correspondence_dist = 0.5;

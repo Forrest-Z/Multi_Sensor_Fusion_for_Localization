@@ -22,6 +22,7 @@ public:
   double dt;
 
 public:
+  // 这个dt初始化后，会被修改成两次点云回调的时间差
   PoseSystem() { dt = 0.01; }
 
   /**
