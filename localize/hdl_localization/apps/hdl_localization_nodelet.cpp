@@ -283,7 +283,6 @@ private:
       imu_data.erase(imu_data.begin(), imu_iter);
     }
 
-    // odometry-based prediction
     // TODO:基于里程计的预测，添加视觉里程计作为预测
     ros::Time last_correction_time = pose_estimator->last_correction_time();
     if (private_nh.param<bool>("enable_robot_odometry_prediction", false) && !last_correction_time.isZero()) {
@@ -451,7 +450,7 @@ private:
    * 1.发布odom话题,时间戳为当前帧雷达时间,里程计位姿为ukf校正后位姿
    * 2.发布从map到odom_child_frame_id的tf
    * @param stamp  timestamp
-   * @param pose   odometry pose to be published
+   * @param pose   odometry pose to be published 这个得到的pose是全局坐标系下面的
    */
   void publish_odometry(const ros::Time& stamp, const Eigen::Matrix4f& pose) {
     // 1.维护系统的tf

@@ -1,0 +1,35 @@
+<launch>
+
+    <node name="semantic_segmentation_ros" pkg="semantic_segmentation_ros" type="four_cam_segmentation_concat.py" output="screen">
+
+        <!-- Input -->
+        <!-- Color image_raw topic to="/topic/name" -->
+        <remap from="camera1/color/image_raw" to="/camera1/color/image_raw"/>
+        <remap from="camera2/color/image_raw" to="/camera2/color/image_raw"/>
+        <remap from="camera3/color/image_raw" to="/camera3/color/image_raw"/>
+        <remap from="camera4/color/image_raw" to="/camera4/color/image_raw"/>
+
+        <!-- Output -->
+        <!-- Rename output topic if required -->
+        <!-- <remap from="seg1/color/image_raw" to="/seg1/color/image_raw" /> -->
+        <!-- <remap from="seg2/color/image_raw" to="/seg2/color/image_raw" /> -->
+        <!-- <remap from="seg3/color/image_raw" to="/seg3/color/image_raw" /> -->
+        <!-- <remap from="seg4/color/image_raw" to="/seg4/color/image_raw" /> -->
+
+        <!-- GPU ID -->
+        <param name="gpu_id" value="0" />
+
+        <!-- Path to color mat and class name files -->
+        <param name="color150_mat_filepath" value="$(find semantic_segmentation_ros)/data/color150.mat" />
+        <param name="objects150_csv_filepath" value="$(find semantic_segmentation_ros)/data/object150_info.csv" />
+
+        <!-- Path to configuration file. Change path according to encoder-decoder -->
+        <param name="cfg_filepath" value="$(find semantic_segmentation_ros)/config/ade20k-mobilenetv2dilated-c1_deepsup.yaml" />
+
+        <!-- Path to model ckpt dir. -->
+        <param name="model_ckpt_dir" value="$(find semantic_segmentation_ros)/ckpt/ade20k-mobilenetv2dilated-c1_deepsup" />
+
+    </node>
+
+</launch>
+

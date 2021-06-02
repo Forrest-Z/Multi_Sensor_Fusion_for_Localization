@@ -171,7 +171,8 @@ pcl::PointCloud<PoseEstimator::PointT>::Ptr PoseEstimator::correct(const ros::Ti
     // 没有odom就用predict得到的结果作为ndt匹配初值
     init_guess = imu_guess = matrix();
   }
-  // 先不看
+  // 使用里程计的话
+  // ndt匹配的初值是odom和imu的融合
   else {
     imu_guess = matrix();
     odom_guess = odom_matrix();

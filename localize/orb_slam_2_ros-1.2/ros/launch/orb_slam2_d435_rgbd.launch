@@ -1,10 +1,10 @@
 <launch>
-  <node name="base_to_cam" pkg="tf2_ros" type="static_transform_publisher" args="0 0 0 0 0 0 base_link camera_link"/>
+  <!-- <node name="base_to_cam" pkg="tf2_ros" type="static_transform_publisher" args="0 0 0 0 0 0 base_link camera_link"/> -->
 
   <node name="orb_slam2_rgbd" pkg="orb_slam2_ros" type="orb_slam2_ros_rgbd" output="screen">
 
-    <remap from="/camera/rgb/image_raw" to="/camera1/color/image_raw" />
-    <remap from="/camera/depth_registered/image_raw" to="/camera1/aligned_depth_to_color/image_raw" />
+    <remap from="/camera/rgb/image_raw" to="/camera/color/image_raw" />
+    <remap from="/camera/depth_registered/image_raw" to="/camera/aligned_depth_to_color/image_raw" />
 
     <param name="publish_pointcloud" type="bool" value="true" />
     <param name="publish_pose" type="bool" value="true" />
@@ -52,7 +52,7 @@
     <param name="camera_p2" type="double" value="0.0" />
     <param name="camera_k3" type="double" value="0.0" />
     <!-- IR projector baseline times fx (aprox.) -->
-    <param name="camera_baseline" type="double" value="9.052" />
+    <param name="camera_baseline" type="double" value="30.75" />
   </node>
 
   <node name="rviz2" pkg="rviz" type="rviz" args="-d $(find orb_slam2_ros)/ros/config/rviz_config.rviz"/>

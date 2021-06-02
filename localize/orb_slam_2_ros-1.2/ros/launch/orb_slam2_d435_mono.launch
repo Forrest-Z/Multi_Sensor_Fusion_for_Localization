@@ -1,5 +1,5 @@
 <launch>
-  <node pkg="tf" type="static_transform_publisher" name="base_link_to_cam" args="0 0 0 0 0 0 base_link camera_link 10" output="screen"/>
+  <!-- <node pkg="tf" type="static_transform_publisher" name="base_link_to_cam" args="0 0 0 0 0 0 base_link camera1_link 10" output="screen"/> -->
 
   <node name="orb_slam2_mono" pkg="orb_slam2_ros" type="orb_slam2_ros_mono" output="screen">
 
@@ -15,8 +15,8 @@
     <param name="map_file" type="string" value="map.bin" />
     <param name="voc_file" type="string" value="$(find orb_slam2_ros)/orb_slam2/Vocabulary/ORBvoc.txt" />
 
-    <param name="pointcloud_frame_id" type="string" value="map" />
-    <param name="camera_frame_id" type="string" value="camera_link" />
+    <param name="pointcloud_frame_id" type="string" value="odom" />
+    <param name="camera_frame_id" type="string" value="camera1_color_optical_frame" />
     <param name="min_num_kf_in_map" type="int" value="5" />
 
     <!-- ORB parameters -->
