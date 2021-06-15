@@ -1,7 +1,8 @@
 <?xml version="1.0"?>
 <launch>
-  <!-- load params -->
+  <!-- 基本参数：使用哪个全局定位方法，点云地图的降采样参数 -->
   <rosparam command="load" file="$(find hdl_global_localization)/config/general_config.yaml" ns="/hdl_global_localization" />
+  <!-- 三种全局定位方法的 -->
   <rosparam command="load" file="$(find hdl_global_localization)/config/bbs_config.yaml" ns="/hdl_global_localization" />
   <rosparam command="load" file="$(find hdl_global_localization)/config/fpfh_config.yaml" ns="/hdl_global_localization" />
   <rosparam command="load" file="$(find hdl_global_localization)/config/ransac_config.yaml" ns="/hdl_global_localization" />

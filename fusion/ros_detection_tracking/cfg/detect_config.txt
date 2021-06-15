@@ -1,0 +1,4 @@
+/home/base/shared_dir/sensorfusion/catkin_ws/src/ros_detection_tracking/dat/yolo/
+/home/base/shared_dir/sensorfusion/catkin_ws/src/ros_detection_tracking/dat/yolo/coco.names
+/home/base/shared_dir/sensorfusion/catkin_ws/src/ros_detection_tracking/dat/yolo/yolov3.cfg
+/home/base/shared_dir/sensorfusion/catkin_ws/src/ros_detection_tracking/dat/yolo/yolov3.weights
