@@ -7,3 +7,4 @@ build/
 cmake-build-debug/
 Vocabulary/
 autonomous_exploration_development_environment/
+liborb_slam2_ros.so

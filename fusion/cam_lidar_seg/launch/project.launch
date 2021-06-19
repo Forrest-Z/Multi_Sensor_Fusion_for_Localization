@@ -1,5 +1,5 @@
 <launch>
-    <arg name="cfg_path" default="$(find cam_lidar_seg)/cfg/cam4_lowres.txt" />
+    <arg name="cfg_path" default="$(find cam_lidar_seg)/cfg/kitti_seg.txt" />
     <param name="cfg" type="str" value="$(arg cfg_path)" />
     <node name="project_pc_to_image" pkg="cam_lidar_seg" type="projector" output="screen"/>
 </launch>

@@ -82,6 +82,7 @@ void detectObjects(cv::Mat& img, std::vector<BoundingBox>& bBoxes, float confThr
     }
     
     // perform non-maxima suppression
+    // 极大值抑制
     vector<int> indices;
     cv::dnn::NMSBoxes(boxes, confidences, confThreshold, nmsThreshold, indices);
     for(auto it=indices.begin(); it!=indices.end(); ++it) {

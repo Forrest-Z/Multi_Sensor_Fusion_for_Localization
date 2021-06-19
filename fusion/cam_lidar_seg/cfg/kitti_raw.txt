@@ -1,4 +1,4 @@
-/segmentation/color/image_raw
+/kitti/camera_color_left/image_raw
 /kitti/velo/pointcloud
 
 7.215377e+02 0.000000e+00 6.095593e+02 4.485728e+01

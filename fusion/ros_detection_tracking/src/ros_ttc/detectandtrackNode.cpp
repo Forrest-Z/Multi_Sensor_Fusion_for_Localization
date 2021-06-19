@@ -41,23 +41,25 @@ void DetectandTrack::detectandtrack_callback(const sensor_msgs::Image::ConstPtr 
     DataFrame frame;
     frame.cameraImg = raw_img;
 
+    // 按照参数裁剪点云，保存在cloudA
     cropLidarPoints(cloudA, i_params.crop_minX, i_params.crop_maxX, i_params.crop_Y, i_params.crop_minZ, i_params.crop_maxZ); //crop pointcloud
-
     //frame.pointcloud = *cloudA;
 
     cout << "/*1.construct data Frame and crop*/ done" << endl;
 
     /*2.detection and classification*/
+    // yolo检测cameraImg，并保存结果在boundingBoxes
     detectObjects(frame.cameraImg, frame.boundingBoxes, confThreshold, nmsThreshold, i_params.yoloBasePath, i_params.yoloClassesFile,
                   i_params.yoloModelConfiguration, i_params.yoloModelWeights, bVis);
 
     cout << "/*2.detection and classification*/ has done" << endl;
 
     /*3.cluster the point with the bounding box*/
-
+    // 将boundingBoxes中的点云聚类
     clusterLidarWithROI(frame.boundingBoxes, cloudA, shrinkFactor, i_params.cameraIn, i_params.camtocam_mat, i_params.RT);
     cout << " /*3.cluster the point with the bounding box*/ done" << endl;
 
+    // 提取图像的特征点描述子
     /*4.detect keypoint*/
     cv::cvtColor(frame.cameraImg, imgGray, cv::COLOR_BGR2GRAY);
     detKeypointsShiTomasi(keypoints, imgGray, false);

@@ -19,7 +19,7 @@ void matchDescriptors(std::vector<cv::KeyPoint> &kPtsSource, std::vector<cv::Key
     }
     else if (matcherType.compare("MAT_FLANN") == 0)
     {
-       if (descSource.type() != CV_32F)
+        if (descSource.type() != CV_32F)
         { // OpenCV bug workaround : convert binary descriptors to floating point due to a bug in current OpenCV implementation
             descSource.convertTo(descSource, CV_32F);
             descRef.convertTo(descRef, CV_32F);
@@ -35,7 +35,7 @@ void matchDescriptors(std::vector<cv::KeyPoint> &kPtsSource, std::vector<cv::Key
     }
     else if (selectorType.compare("SEL_KNN") == 0)
     { // k nearest neighbors (k=2)
-        vector <vector<cv::DMatch>>knn_matches;
+        vector<vector<cv::DMatch>> knn_matches;
         matcher->knnMatch(descSource, descRef, knn_matches, 2);
 
         double minDescDistRatio = 0.8;
@@ -47,8 +47,6 @@ void matchDescriptors(std::vector<cv::KeyPoint> &kPtsSource, std::vector<cv::Key
                 matches.push_back((*it)[0]);
             }
         }
-
-        
     }
 }
 
@@ -72,7 +70,6 @@ void descKeypoints(vector<cv::KeyPoint> &keypoints, cv::Mat &img, cv::Mat &descr
         int octaves = 3;           // detection octaves (use 0 to do single scale)
         float patternScale = 1.0f; // apply this scale to the pattern used for sampling the neighbourhood of a keypoint.
         extractor = cv::ORB::create(threshold, octaves, patternScale);
-        
     }
 
     // perform feature description
@@ -95,7 +92,7 @@ void detKeypointsShiTomasi(vector<cv::KeyPoint> &keypoints, cv::Mat &img, bool b
     double k = 0.04;
 
     // Apply corner detection
-  //  double t = (double)cv::getTickCount();
+    //  double t = (double)cv::getTickCount();
     vector<cv::Point2f> corners;
     cv::goodFeaturesToTrack(img, corners, maxCorners, qualityLevel, minDistance, cv::Mat(), blockSize, false, k);
 
@@ -108,9 +105,10 @@ void detKeypointsShiTomasi(vector<cv::KeyPoint> &keypoints, cv::Mat &img, bool b
         newKeyPoint.size = blockSize;
         keypoints.push_back(newKeyPoint);
     }
+    // 保留前50个？
     keypoints.erase(keypoints.begin() + 50, keypoints.end());
-   // t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
-   // cout << "Shi-Tomasi detection with n=" << keypoints.size() << " keypoints in " << 1000 * t / 1.0 << " ms" << endl;
+    // t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
+    // cout << "Shi-Tomasi detection with n=" << keypoints.size() << " keypoints in " << 1000 * t / 1.0 << " ms" << endl;
 
     // visualize results
     if (bVis)

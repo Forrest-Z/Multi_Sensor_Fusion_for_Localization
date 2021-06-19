@@ -78,7 +78,7 @@ void projector::projection_callback(const sensor_msgs::Image::ConstPtr &img,
     cv::Vec3b color_bgr;
     // 上色后的点云
     pcl::PointCloud<pcl::PointXYZRGB> seg_cloud;
-    for (pcl::PointCloud<pcl::PointXYZ>::const_iterator it = cloud->points.begin(); it != cloud->points.end(); it++)
+    for (auto it = cloud->points.begin(); it != cloud->points.end(); it++)
     {
         // 使用坐标过滤点云
         // if (it->x < 0.0)
@@ -134,7 +134,7 @@ void projector::projection_callback(const sensor_msgs::Image::ConstPtr &img,
             seg_point.g = color_bgr(1);
             seg_point.r = color_bgr(2);
             seg_cloud.push_back(seg_point);
-            cv::circle(fusion_img, pixel, 5, color_bgr, -1);
+            cv::circle(fusion_img, pixel, 1, color_bgr, -1);
         }
         // 视野外点云为红色
         else
