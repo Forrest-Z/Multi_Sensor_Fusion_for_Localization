@@ -7,7 +7,9 @@
     <!-- 目前测试不行，改变了child_frame会影响点云的方向，较好的方法是把点云转到velodyne这个tf下 -->
     <!-- input clouds are transformed in odom_child_frame, and then localization is performed in that frame -->
     <!-- this is useful to match the LIDAR and IMU coodinate systems -->
-    <arg name="odom_child_frame_id" default="velodyne" />
+    <!-- <arg name="odom_child_frame_id" default="velodyne" /> -->
+    <arg name="odom_child_frame_id" default="camera4_imu_optical_frame" />
+
     <!-- 可选参数 -->
     <arg name="use_imu" default="true" />
     <arg name="invert_imu_acc" default="false" />

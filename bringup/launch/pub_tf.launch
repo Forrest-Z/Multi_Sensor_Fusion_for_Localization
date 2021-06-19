@@ -5,10 +5,11 @@
     <!-- 添加一个虚拟的base_link，和lidar frame重合-->
     <node pkg="tf2_ros" type="static_transform_publisher" name="base_to_lidar" args="0 0 0 0 0 0 base_link velodyne" />
     <node pkg="tf2_ros" type="static_transform_publisher" name="lidar_to_cam1" args="0.0126334  0.0915393 -0.0265522 2.37246  3.1336 1.59304 velodyne camera1_color_optical_frame" />
-    <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="lidar_to_cam2" args="-0.0872598  0.0130602 -0.0418202   0.825525 -0.0179668   -1.60677 velodyne camera2_color_optical_frame" /> -->
-    <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="lidar_to_cam3" args="-0.0129798 -0.0893272 -0.0376506    2.3796 -0.027479  -1.58396 velodyne camera3_color_optical_frame" /> -->
+    <node pkg="tf2_ros" type="static_transform_publisher" name="lidar_to_cam2" args="-0.0872598  0.0130602 -0.0418202   0.825525 -0.0179668   -1.60677 velodyne camera2_color_optical_frame" />
+    <node pkg="tf2_ros" type="static_transform_publisher" name="lidar_to_cam3" args="-0.0129798 -0.0893272 -0.0376506    2.3796 -0.027479  -1.58396 velodyne camera3_color_optical_frame" />
     <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="lidar_to_cam4" args="0.101262 -0.00823666  -0.0560857 0.811597 -3.13058   1.5383 velodyne camera4_color_optical_frame" /> -->
     <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="cam4_to_imu" args="0.020, -0.005, -0.012 0.005, 0.006, -0.004 camera4_color_optical_frame camera4_imu_optical_frame" /> -->
+    <node pkg="tf2_ros" type="static_transform_publisher" name="lidar_to_imu" args="0.045, -0.048, -0.069 -1.623, -0.805, -3.097 camera4_imu_optical_frame velodyne" />
 
     <!-- 检查tf关系 -->
     <node pkg="rqt_tf_tree" type="rqt_tf_tree" name="view_tf"/>
