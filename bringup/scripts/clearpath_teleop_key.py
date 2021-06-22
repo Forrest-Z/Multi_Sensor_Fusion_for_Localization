@@ -34,7 +34,7 @@ from geometry_msgs.msg import Twist
 import sys, select, termios, tty
 
 msg = """
-Control Your Turtlebot!
+Control Your Clearpath!
 ---------------------------
 Moving around:
    u    i    o

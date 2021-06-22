@@ -24,9 +24,3 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
 )
-
-add_executable(pub_image src/pub_image.cpp)
-target_link_libraries(pub_image ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
-
-add_executable(camera_sync src/camera_sync_test.cpp)
-target_link_libraries(camera_sync ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
