@@ -1,0 +1,30 @@
+<launch>
+
+  <arg name="world_name" default="garage"/>
+  <arg name="gazebo_gui" default="false"/>
+  <arg name="checkTerrainConn" default="true"/>
+
+  <include file="$(find ps3joy)/launch/ps3.launch" />
+
+  <include file="$(find local_planner)/launch/local_planner.launch" />
+
+  <include file="$(find terrain_analysis)/launch/terrain_analysis.launch" />
+
+  <include file="$(find terrain_analysis_ext)/launch/terrain_analysis_ext.launch" >
+    <arg name="checkTerrainConn" value="$(arg checkTerrainConn)"/>
+  </include>
+
+  <include file="$(find vehicle_simulator)/launch/vehicle_simulator.launch" >
+    <arg name="world_name" value="$(arg world_name)"/>
+    <arg name="gui" value="$(arg gazebo_gui)"/>
+  </include>
+
+  <include file="$(find sensor_scan_generation)/launch/sensor_scan_generation.launch" />
+
+  <include file="$(find visualization_tools)/launch/visualization_tools.launch" >
+    <arg name="world_name" value="$(arg world_name)"/>
+  </include>
+
+  <node launch-prefix="nice" pkg="rviz" type="rviz" name="rvizGA" args="-d $(find vehicle_simulator)/rviz/vehicle_simulator.rviz" respawn="true"/>
+
+</launch>

@@ -1,0 +1,36 @@
+<launch>
+
+  <arg name="world_name" default="indoor"/>
+  <arg name="gazebo_gui" default="true"/>
+  <arg name="checkTerrainConn" default="false"/>
+
+  <!-- 启动手柄 -->
+  <!-- <include file="$(find ps3joy)/launch/ps3.launch" /> -->
+
+  <!-- 局部路径规划器，生成cmd_vel -->
+  <include file="$(find local_planner)/launch/local_planner.launch" />
+
+  <!-- 规划器相关 -->
+  <include file="$(find terrain_analysis)/launch/terrain_analysis.launch" />
+
+  <include file="$(find terrain_analysis_ext)/launch/terrain_analysis_ext.launch">
+    <arg name="checkTerrainConn" value="$(arg checkTerrainConn)"/>
+  </include>
+
+  <!-- 启动仿真器 -->
+  <include file="$(find vehicle_simulator)/launch/vehicle_simulator.launch">
+    <arg name="world_name" value="$(arg world_name)"/>
+    <arg name="gui" value="$(arg gazebo_gui)"/>
+  </include>
+
+  <!-- 把点云转到当前传感器坐标系上面去 -->
+  <include file="$(find sensor_scan_generation)/launch/sensor_scan_generation.launch" />
+
+  <!-- 生成轨迹文件(在log文件夹下面) -->
+  <include file="$(find visualization_tools)/launch/visualization_tools.launch">
+    <arg name="world_name" value="$(arg world_name)"/>
+  </include>
+
+  <node launch-prefix="nice" pkg="rviz" type="rviz" name="rvizGA" args="-d $(find vehicle_simulator)/rviz/vehicle_simulator.rviz" respawn="true"/>
+
+</launch>

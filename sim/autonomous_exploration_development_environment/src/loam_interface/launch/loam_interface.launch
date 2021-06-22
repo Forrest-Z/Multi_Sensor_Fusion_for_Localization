@@ -1,0 +1,15 @@
+<launch>
+
+  <node pkg="loam_interface" type="loamInterface" name="loamInterface" output="screen" required="true">
+    <!-- 里程计信息 -->
+    <param name="stateEstimationTopic" type="string" value="/aft_mapped_to_init_high_frec" />
+    <!-- 点云 -->
+    <param name="registeredScanTopic" type="string" value="/velodyne_cloud_registered" />
+    <!-- 下面两个参数是处理原始的loam翻转坐标系用的 -->
+    <param name="flipStateEstimation" type="bool" value="false" />
+    <param name="flipRegisteredScan" type="bool" value="false" />
+    <param name="sendTF" type="bool" value="true" />
+    <param name="reverseTF" type="bool" value="false" />
+  </node>
+
+</launch>
