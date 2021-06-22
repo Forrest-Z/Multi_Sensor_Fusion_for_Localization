@@ -6,5 +6,5 @@ vis/
 build/
 cmake-build-debug/
 Vocabulary/
-autonomous_exploration_development_environment/
 liborb_slam2_ros.so
+sim/autonomous_exploration_development_environment/src/vehicle_simulator/mesh/
