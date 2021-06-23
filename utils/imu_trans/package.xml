@@ -1,0 +1,17 @@
+<package format="2">
+  <name>imu_trans</name>
+  <version>0.3.0</version>
+  <description>imu_trans</description>
+
+  <license>BSD</license>
+
+  <maintainer email="pbovbel@clearpathrobotics.com">Paul Bovbel</maintainer>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>roscpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>tf</depend>
+</package>
