@@ -17,3 +17,7 @@ include_directories("/usr/include/eigen3")
 add_executable(imu_trans_node src/imu_trans_node.cpp)
 target_link_libraries(imu_trans_node ${catkin_LIBRARIES})
 
+add_executable(tf2_listen src/tf2_listen.cpp)
+target_link_libraries(tf2_listen
+ ${catkin_LIBRARIES}
+)
