@@ -46,7 +46,7 @@
     <arg name="pointcloud_texture_stream" default="RS2_STREAM_COLOR"/>
     <arg name="pointcloud_texture_index" default="0"/>
 
-    <arg name="enable_sync" default="false"/>
+    <arg name="enable_sync" default="true"/>
     <arg name="align_depth" default="false"/>
     
     <!-- 不发布tf -->
@@ -58,7 +58,9 @@
     <arg name="linear_accel_cov" default="0.01"/>
     <arg name="initial_reset" default="false"/>
     <!-- 插值法合成一个话题 -->
+    <!-- linear_interpolation有400hz copy有400hz -->
     <arg name="unite_imu_method" default="linear_interpolation"/>
+    <!-- <arg name="unite_imu_method" default="copy"/> -->
     <arg name="topic_odom_in" default="odom_in"/>
     <arg name="calib_odom_file" default=""/>
     <arg name="publish_odom_tf" default="true"/>

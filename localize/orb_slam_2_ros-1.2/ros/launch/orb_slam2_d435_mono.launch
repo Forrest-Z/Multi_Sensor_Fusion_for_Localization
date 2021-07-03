@@ -3,7 +3,7 @@
 
   <node name="orb_slam2_mono" pkg="orb_slam2_ros" type="orb_slam2_ros_mono" output="screen">
 
-    <remap from="/camera/image_raw" to="/camera/color/image_raw" />
+    <remap from="/camera/image_raw" to="/camera1/color/image_raw" />
 
     <param name="publish_pointcloud" type="bool" value="true" />
     <param name="publish_pose" type="bool" value="true" />
@@ -36,15 +36,15 @@
     <!--If the node should wait for a camera_info topic to take the camera calibration data-->
     <param name="load_calibration_from_cam" type="bool" value="false" />
     <!-- Camera calibration and distortion parameters (OpenCV) -->
-      <param name="camera_fx" type="double" value="615.6707153320312" />
-      <param name="camera_fy" type="double" value="615.962158203125" />
-      <param name="camera_cx" type="double" value="328.0010681152344" />
-      <param name="camera_cy" type="double" value="241.31031799316406" />
+    <param name="camera_fx" type="double" value="306.07521" />
+    <param name="camera_fy" type="double" value="305.71203" />
+    <param name="camera_cx" type="double" value="165.3913" />
+    <param name="camera_cy" type="double" value="119.85677" />
     <!-- Camera calibration and distortion parameters (OpenCV) -->
-    <param name="camera_k1" type="double" value="0.091577" />
-    <param name="camera_k2" type="double" value="-0.191165" />
-    <param name="camera_p1" type="double" value="-0.003046" />
-    <param name="camera_p2" type="double" value="-0.003552" />
+    <param name="camera_k1" type="double" value="0.121090" />
+    <param name="camera_k2" type="double" value="-0.237727" />
+    <param name="camera_p1" type="double" value="-0.000981" />
+    <param name="camera_p2" type="double" value="-0.000291" />
     <param name="camera_k3" type="double" value="0.0" />
   </node>
 

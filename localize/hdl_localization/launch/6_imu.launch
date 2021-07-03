@@ -7,15 +7,14 @@
     <!-- 目前测试不行，改变了child_frame会影响点云的方向，较好的方法是把点云转到velodyne这个tf下 -->
     <!-- input clouds are transformed in odom_child_frame, and then localization is performed in that frame -->
     <!-- this is useful to match the LIDAR and IMU coodinate systems -->
-    <!-- <arg name="odom_child_frame_id" default="velodyne" /> -->
-    <arg name="odom_child_frame_id" default="camera4_imu_optical_frame" />
+    <arg name="odom_child_frame_id" default="velodyne" />
 
     <!-- 可选参数 -->
     <arg name="use_imu" default="true" />
     <arg name="invert_imu_acc" default="false" />
     <arg name="invert_imu_gyro" default="false" />
     <arg name="use_global_localization" default="true" />
-    <arg name="imu_topic" default="/camera4/imu" />
+    <arg name="imu_topic" default="/imu_transformed" />
     <arg name="enable_robot_odometry_prediction" value="false" />
     <arg name="robot_odom_frame_id" value="odom" />
     <!-- 打印误差 -->
@@ -35,7 +34,7 @@
     <!-- globalmap_server_nodelet -->
     <node pkg="nodelet" type="nodelet" name="globalmap_server_nodelet" args="load hdl_localization/GlobalmapServerNodelet $(arg nodelet_manager)">
         <!-- 点云地图路径 -->
-        <param name="globalmap_pcd" value="$(find hdl_localization)/data/6_from_mesh_v2.pcd" />
+        <param name="globalmap_pcd" value="$(find hdl_localization)/data/6_new_mesh.pcd" />
         <!-- <param name="globalmap_pcd" value="$(find hdl_localization)/data/6_clean_downsample_align_to_mesh.pcd" /> -->
         <param name="convert_utm_to_local" value="true" />
         <param name="downsample_resolution" value="0.1" />

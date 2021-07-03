@@ -287,7 +287,7 @@ private:
     ros::Time last_correction_time = pose_estimator->last_correction_time();
     if (private_nh.param<bool>("enable_robot_odometry_prediction", false) && !last_correction_time.isZero()) {
       geometry_msgs::TransformStamped odom_delta;
-      // TODO:经过测试，这种查询tf的方式是返回的是odom_child_frame_id在robot_odom_frame_id下的坐标
+      // 这种查询tf的方式是返回的是odom_child_frame_id在robot_odom_frame_id下的坐标
       // last_correction_time:上一帧点云的时间
       // stamp:当前帧点云的时间
       // ros::Time(0):tf_buffer中最新时刻的数据
@@ -512,9 +512,11 @@ private:
   void publish_scan_matching_status(const std_msgs::Header& header, pcl::PointCloud<pcl::PointXYZI>::ConstPtr aligned) {
     ScanMatchingStatus status;
 
-    status.header = header;                                   // 时间戳
-    status.has_converged = registration->hasConverged();      // 是否收敛
-    status.matching_error = registration->getFitnessScore();  // 匹配的误差
+    status.header = header;
+    // Return the state of convergence after the last align run
+    status.has_converged = registration->hasConverged();
+    // Obtain the Euclidean fitness score (e.g., sum of squared distances from the source to the target)
+    status.matching_error = registration->getFitnessScore();
 
     const double max_correspondence_dist = 0.5;
 
