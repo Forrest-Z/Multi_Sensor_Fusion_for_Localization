@@ -90,19 +90,21 @@ int main(int argc, char **argv)
     geometry_msgs::TransformStamped t_in;
     tf2_ros::Buffer tf_buffer;
     tf2_ros::TransformListener tfListener(tf_buffer);
+
+    // 这里就是为了防止tf读取的是0
     while (true)
     {
         if (tf_buffer.canTransform(target_frame_, imu_frame_, ros::Time(0)))
         {
             t_in = tf_buffer.lookupTransform(target_frame_, imu_frame_, ros::Time(0));
         }
-        if (t_in.transform.rotation.x!=0)
+        if (t_in.transform.rotation.x != 0)
         {
             break;
         }
     }
 
-    std::cout << t_in.transform.rotation << std::endl;
+    // std::cout << t_in.transform.rotation << std::endl;
 
     Eigen::Quaterniond r(t_in.transform.rotation.w,
                          t_in.transform.rotation.x,
