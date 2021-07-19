@@ -223,10 +223,11 @@ pcl::PointCloud<PoseEstimator::PointT>::Ptr PoseEstimator::correct(const ros::Ti
   observation.middleRows(3, 4) = Eigen::Vector4f(q.w(), q.x(), q.y(), q.z());
   last_observation = trans;  // 保存上一次观测结果
 
-  // TODO:这两个erro干啥的
+  // 无预测的误差
   wo_pred_error = no_guess.inverse() * registration->getFinalTransformation();
   // ukf更新
   ukf->correct(observation);
+  // 有imu预测的误差
   imu_pred_error = imu_guess.inverse() * registration->getFinalTransformation();
 
   // 先不看

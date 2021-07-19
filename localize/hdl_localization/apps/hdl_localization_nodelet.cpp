@@ -57,10 +57,24 @@ public:
     use_imu = private_nh.param<bool>("use_imu", true);
     invert_acc = private_nh.param<bool>("invert_acc", false);
     invert_gyro = private_nh.param<bool>("invert_gyro", false);
+    // trans_imu = private_nh.param<bool>("trans_imu", true);
+    // imu_target_frame = private_nh.param<bool>("imu_target_frame", true);
+
     if (use_imu) {
       NODELET_INFO("enable imu-based prediction");
       imu_sub = mt_nh.subscribe("/gpsimu_driver/imu_data", 256, &HdlLocalizationNodelet::imu_callback, this);
     }
+    // 通过tf读取imu外参
+    // if (trans_imu) {
+    //   while (true) {
+    //     if (tf_buffer.canTransform(target_frame, imu_frame, ros::Time(0))) {
+    //       t_in = tf_buffer.lookupTransform(target_frame, imu_frame, ros::Time(0));
+    //     }
+    //     if (t_in.transform.rotation.x != 0) {
+    //       break;
+    //     }
+    //   }
+    // }
 
     // 激光雷达订阅，注册回调
     points_sub = mt_nh.subscribe("/velodyne_points", 5, &HdlLocalizationNodelet::points_callback, this);
@@ -266,9 +280,11 @@ private:
     } else {
       // 有IMU的情况
       // 对两次触发点云回调(0.1s)中保存的每一帧IMU数据构造控制量
+      // 注意加锁，这里会清空使用过的IMU数据
       std::lock_guard<std::mutex> lock(imu_data_mutex);
       auto imu_iter = imu_data.begin();
       for (imu_iter; imu_iter != imu_data.end(); imu_iter++) {
+        // TODO:在这里添加trans imu
         // 如果点云的时间戳比imu的时间早，就放弃这个imu数据
         if (stamp < (*imu_iter)->header.stamp) {
           break;
@@ -341,10 +357,11 @@ private:
       hdl_global_localization::SetGlobalMap srv;
       pcl::toROSMsg(*globalmap, srv.request.global_map);
 
+      // 调用服务把全局地图发给global localization
       if (!set_global_map_service.call(srv)) {
         NODELET_INFO("failed to set global map");
       } else {
-        NODELET_INFO("done");
+        NODELET_INFO("succeed to set globalmap for global localization");
       }
     }
   }
@@ -415,6 +432,7 @@ private:
    */
   void initialpose_callback(const geometry_msgs::PoseWithCovarianceStampedConstPtr& pose_msg) {
     NODELET_INFO("initial pose received!!");
+    // 加锁,下面对于pose_estimator的修改属于临界区
     std::lock_guard<std::mutex> lock(pose_estimator_mutex);
     const auto& p = pose_msg->pose.pose.position;
     const auto& q = pose_msg->pose.pose.orientation;
@@ -514,30 +532,35 @@ private:
 
     status.header = header;
     // Return the state of convergence after the last align run
-    status.has_converged = registration->hasConverged();
+    status.has_converged = registration->hasConverged();  // 是否收敛
     // Obtain the Euclidean fitness score (e.g., sum of squared distances from the source to the target)
-    status.matching_error = registration->getFitnessScore();
+    status.matching_error = registration->getFitnessScore();  // 点云到最近目标点云对应点对的距离平方和
 
     const double max_correspondence_dist = 0.5;
 
     int num_inliers = 0;
     std::vector<int> k_indices;
     std::vector<float> k_sq_dists;
+    // 遍历点云，每个点在整个点云上进行一次最近邻搜索(k == 1)
     for (int i = 0; i < aligned->size(); i++) {
       const auto& pt = aligned->at(i);
       registration->getSearchMethodTarget()->nearestKSearch(pt, 1, k_indices, k_sq_dists);
+      // 最近点的平方 < 阈值
+      // TODO:最近点的阈值是const不是ros参数
       if (k_sq_dists[0] < max_correspondence_dist * max_correspondence_dist) {
         num_inliers++;
       }
     }
-    status.inlier_fraction = static_cast<float>(num_inliers) / aligned->size();
+    status.inlier_fraction = static_cast<float>(num_inliers) / aligned->size();  // 匹配上的点占在整体的比值
     status.relative_pose = tf2::eigenToTransform(Eigen::Isometry3d(registration->getFinalTransformation().cast<double>())).transform;
 
-    status.prediction_labels.reserve(2);
-    status.prediction_errors.reserve(2);
+    // TODO:这里设计容量为2，是不是设计的时候不考虑imu+odom的融合方式
+    status.prediction_labels.reserve(2);  // std_msgs/String[]
+    status.prediction_errors.reserve(2);  // geometry_msgs/Transform[]
 
     std::vector<double> errors(6, 0.0);
 
+    // 总共有3个lable，但是保存lable的数组只有两个
     if (pose_estimator->wo_prediction_error()) {
       status.prediction_labels.push_back(std_msgs::String());
       status.prediction_labels.back().data = "without_pred";
@@ -568,10 +591,17 @@ private:
   std::string robot_odom_frame_id;
   std::string odom_child_frame_id;
 
+  // imu
   bool use_imu;
   bool invert_acc;
   bool invert_gyro;
+  // bool trans_imu;
+  // std::string imu_target_frame;
+  // std::string imu_frame;
+  // Eigen::Transform<double, 3, Eigen::Affine> t;
+
   ros::Subscriber imu_sub;
+
   ros::Subscriber points_sub;
   ros::Subscriber globalmap_sub;
   ros::Subscriber initialpose_sub;

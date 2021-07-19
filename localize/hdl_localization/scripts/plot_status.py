@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding:utf8 -*-
 import rospy
 import numpy
 import scipy.spatial
@@ -12,14 +13,16 @@ class Plotter(object):
         pyplot.show(block=False)
 
         self.status_buffer = []
+        # 10Hz触发timer_callback,不知道为啥要这样整
         self.timer = rospy.Timer(rospy.Duration(0.1), self.timer_callback)
         self.status_sub = rospy.Subscriber(
             '/status', ScanMatchingStatus, self.status_callback)
 
     def status_callback(self, status_msg):
         self.status_buffer.append(status_msg)
-
+        # 滑窗，系统最多保存50个status
         if len(self.status_buffer) > 50:
+            # 负数表示从右往左保存50个status
             self.status_buffer = self.status_buffer[-50:]
 
     def timer_callback(self, event):
@@ -27,6 +30,7 @@ class Plotter(object):
             return
 
         errors = {}
+        # 每次计时器回调都遍历一遍status
         for status in self.status_buffer:
             for label, error in zip(status.prediction_labels, status.prediction_errors):
                 if label.data not in errors:
@@ -38,22 +42,26 @@ class Plotter(object):
                          error.translation.y, error.translation.z]
 
                 t = status.header.stamp.secs + status.header.stamp.nsecs / 1e9
+                # 向量的归一化
                 t_error = numpy.linalg.norm(trans)
                 r_error = numpy.linalg.norm(
                     scipy.spatial.transform.Rotation.from_quat(quat).as_rotvec())
-
+                
+                # TODO: 这个清空了errors中某一标签的数据，没懂
                 if len(errors[label.data]) and abs(errors[label.data][-1][0] - t) > 1.0:
                     errors[label.data] = []
-
+                
+                # 每一个label对应一个数组，往数组中追加一组数据
                 errors[label.data].append((t, t_error, r_error))
 
         pyplot.clf()
         for label in errors:
             errs = numpy.float64(errors[label])
             pyplot.subplot('211')
+            # t - t_error
             pyplot.plot(errs[:, 0], errs[:, 1], label=label)
-
             pyplot.subplot('212')
+            # t - r_error
             pyplot.plot(errs[:, 0], errs[:, 2], label=label)
 
         pyplot.subplot('211')
