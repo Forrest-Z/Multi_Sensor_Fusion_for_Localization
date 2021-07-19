@@ -1,23 +1,27 @@
 # estimation parameters
-ransac/voxel_based: True
-ransac/max_iterations: 1000000
-ransac/matching_budget: 10000
-ransac/max_correspondence_distance: 1.0
-ransac/similarity_threshold: 0.5
-ransac/correspondence_randomness: 2
-ransac/inlier_fraction: 0.25
+ransac/voxel_based: True # 计算误差的方法
+ransac/max_iterations: 1000000 # RANSAC迭代次数
+ransac/matching_budget: 10000 # 预计的匹配点
+
+# 下面三个参数都是用于排除错误的对应点
+ransac/max_correspondence_distance: 1.0 # 判断是否是内点的阈值
+ransac/similarity_threshold: 0.5 # 越接近1迭代次数越少越快，但是可能排除正确的位置
+ransac/correspondence_randomness: 2 #越大越慢，在N对最佳匹配点中随机选择
+
+ransac/inlier_fraction: 0.25 # 内点的比例
 
 # valid transformation range
-ransac/x_min: -10000.0
-ransac/x_max: 10000.0
-ransac/y_min: -10000.0
-ransac/y_max: 10000.0
-ransac/z_min: -10000.0
-ransac/z_max: 10000.0
+# 下面的参数在代码中没看到哪里用上了
+# ransac/x_min: -10000.0
+# ransac/x_max: 10000.0
+# ransac/y_min: -10000.0
+# ransac/y_max: 10000.0
+# ransac/z_min: -10000.0
+# ransac/z_max: 10000.0
 
-ransac/roll_min: -3.15
-ransac/roll_max: 3.15
-ransac/pitch_min: -3.15
-ransac/pitch_max: 3.15
-ransac/yaw_min: -3.15
-ransac/yaw_max: 3.15
+# ransac/roll_min: -3.15
+# ransac/roll_max: 3.15
+# ransac/pitch_min: -3.15
+# ransac/pitch_max: 3.15
+# ransac/yaw_min: -3.15
+# ransac/yaw_max: 3.15

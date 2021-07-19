@@ -8,3 +8,4 @@ cmake-build-debug/
 Vocabulary/
 liborb_slam2_ros.so
 sim/autonomous_exploration_development_environment/src/vehicle_simulator/mesh/
+localize/orb_slam_2_ros-1.2/orb_slam2/lib/liborb_slam2_ros.so

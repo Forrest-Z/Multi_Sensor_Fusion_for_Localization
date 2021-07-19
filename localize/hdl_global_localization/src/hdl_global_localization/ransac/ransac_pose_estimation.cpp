@@ -1,43 +1,5 @@
 /*
  * This RansacPoseEstimation implementation was written based on pcl::SampleConsensusPrerejective
- *
- * Software License Agreement (BSD License)
- *
- *  Point Cloud Library (PCL) - www.pointclouds.org
- *  Copyright (c) 2010-2012, Willow Garage, Inc.
- *  Copyright (c) 2012-, Open Perception, Inc.
- *
- *  All rights reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions
- *  are met:
- *
- *   * Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *   * Redistributions in binary form must reproduce the above
- *     copyright notice, this list of conditions and the following
- *     disclaimer in the documentation and/or other materials provided
- *     with the distribution.
- *   * Neither the name of the copyright holder(s) nor the names of its
- *     contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- *  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- *  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- *  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- *  COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- *  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- *  CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *  POSSIBILITY OF SUCH DAMAGE.
- *
- * $Id$
- *
  */
 
 #include <atomic>
@@ -55,6 +17,7 @@
 #include <hdl_global_localization/ransac/matching_cost_evaluater_flann.hpp>
 #include <hdl_global_localization/ransac/matching_cost_evaluater_voxels.hpp>
 
+// 全部使用的是模板类的方式，保证点云特征可替换
 namespace hdl_global_localization {
 
 template <typename FeatureT>
@@ -65,13 +28,14 @@ void RansacPoseEstimation<FeatureT>::set_target(pcl::PointCloud<pcl::PointXYZ>::
   this->target = target;
   this->target_features = target_features;
   feature_tree.reset(new pcl::KdTreeFLANN<FeatureT>);
-  feature_tree->setInputCloud(target_features);
-
+  feature_tree->setInputCloud(target_features);  // 对点云特征建立kdtree
+  // TODO:下面的配置作用是什么
   if (private_nh.param<bool>("ransac/voxel_based", true)) {
     evaluater.reset(new MatchingCostEvaluaterVoxels());
   } else {
     evaluater.reset(new MatchingCostEvaluaterFlann());
   }
+  // 判断是否是内点的阈值
   evaluater->set_target(target, private_nh.param<double>("ransac/max_correspondence_distance", 1.0));
 }
 
@@ -81,29 +45,43 @@ void RansacPoseEstimation<FeatureT>::set_source(pcl::PointCloud<pcl::PointXYZ>::
   this->source_features = source_features;
 }
 
+/**
+ * @brief 重点看这个函数,实现了位姿的估计
+ * @tparam FeatureT
+ * @return GlobalLocalizationResults
+ */
 template <typename FeatureT>
 GlobalLocalizationResults RansacPoseEstimation<FeatureT>::estimate() {
   pcl::registration::TransformationEstimationSVD<pcl::PointXYZ, pcl::PointXYZ> transformation_estimation;
 
+  // CorrespondenceRejectorPoly类用于提前去除错误的位姿假设
   pcl::registration::CorrespondenceRejectorPoly<pcl::PointXYZ, pcl::PointXYZ> correspondence_rejection;
-  correspondence_rejection.setInputTarget(target);
-  correspondence_rejection.setInputSource(source);
-  correspondence_rejection.setCardinality(3);
-  correspondence_rejection.setSimilarityThreshold(private_nh.param<double>("ransac/similarity_threshold", 0.5));
+  correspondence_rejection.setInputTarget(target);  // 全局地图
+  correspondence_rejection.setInputSource(source);  // 点云
+  correspondence_rejection.setCardinality(3);       // 多边形基数
+  correspondence_rejection.setSimilarityThreshold(  // 多边形边长的相似度阈值，越接近1越快，但是可能排除正确的位置
+    private_nh.param<double>("ransac/similarity_threshold", 0.5));
 
+  // 预先计算最近的点,用了OMP多线程加速
   ROS_INFO_STREAM("RANSAC : Precompute Nearest Features");
-  std::vector<std::vector<int>> similar_features(source->size());
+  std::vector<std::vector<int>> similar_features(source->size());  // 保存匹配的点对
 #pragma omp parallel for
   for (int i = 0; i < source->size(); i++) {
     std::vector<float> sq_dists;
-    feature_tree->nearestKSearch(source_features->at(i), private_nh.param<int>("ransac/correspondence_randomness", 2), similar_features[i], sq_dists);
-  }
 
+    feature_tree->nearestKSearch(
+      source_features->at(i),
+      private_nh.param<int>("ransac/correspondence_randomness", 2),  // 在N个最佳匹配点之间随机选择，越大越慢
+      similar_features[i],
+      sq_dists);
+  }
+  // 产生随机数
   std::vector<std::mt19937> mts(omp_get_max_threads());
   for (int i = 0; i < mts.size(); i++) {
     mts[i] = std::mt19937(i * 8191 + i + target->size() + source->size());
   }
 
+  // 执行ransac
   ROS_INFO_STREAM("RANSAC : Main Loop");
   std::atomic_int matching_count(0);
   std::atomic_int iterations(0);
@@ -127,6 +105,7 @@ GlobalLocalizationResults RansacPoseEstimation<FeatureT>::estimate() {
       continue;
     }
 
+    // 得到变换矩阵
     Eigen::Matrix4f transformation;
     transformation_estimation.estimateRigidTransformation(*source, samples, *target, correspondences, transformation);
 
@@ -136,9 +115,12 @@ GlobalLocalizationResults RansacPoseEstimation<FeatureT>::estimate() {
 
     matching_count++;
     double inlier_fraction = 0.0;
+    // 计算匹配误差和内点比例
     double matching_error = evaluater->calc_matching_error(*source, transformation, &inlier_fraction);
-    ROS_INFO_STREAM("RANSAC : iteration:" << iterations << " matching_count:" << matching_count << " error:" << matching_error << " inlier:" << inlier_fraction);
+    // TODO: 每次迭代下面这里输出误差太占CPU了
+    // ROS_INFO_STREAM("RANSAC : iteration:" << iterations << " matching_count:" << matching_count << " error:" << matching_error << " inlier:" << inlier_fraction);
 
+    // 保存内点比例足够大的匹配
     if (inlier_fraction > min_inlier_fraction) {
       results[i].reset(new GlobalLocalizationResult(matching_error, inlier_fraction, Eigen::Isometry3f(transformation)));
     }
@@ -147,6 +129,14 @@ GlobalLocalizationResults RansacPoseEstimation<FeatureT>::estimate() {
   return GlobalLocalizationResults(results);
 }
 
+/**
+ * @brief TODO:没看懂啥操作
+ * @tparam FeatureT 
+ * @param mt 
+ * @param similar_features 
+ * @param samples 
+ * @param correspondences 
+ */
 template <typename FeatureT>
 void RansacPoseEstimation<FeatureT>::select_samples(
   std::mt19937& mt,

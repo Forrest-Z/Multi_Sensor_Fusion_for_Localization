@@ -8,6 +8,7 @@
 
 namespace hdl_global_localization {
 
+// FPFH子类,主要看重写后的query函数
 class GlobalLocalizationEngineFPFH_RANSAC : public GlobalLocalizationEngine {
 public:
   GlobalLocalizationEngineFPFH_RANSAC(ros::NodeHandle& private_nh);

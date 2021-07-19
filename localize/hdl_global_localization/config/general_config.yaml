@@ -1,6 +1,9 @@
+# 全局定位方法 
 # BBS, FPFH_RANSAC, FPFH_TEASER
-global_localization_engine: BBS
+global_localization_engine: FPFH_RANSAC
 
-# downsampling for global map and query cloud
+# 全局地图降采样
 globalmap_downsample_resolution: 0.5
+
+# 搜索点云降采样
 query_downsample_resolution: 0.5

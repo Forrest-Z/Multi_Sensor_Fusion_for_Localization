@@ -1,2 +1,6 @@
+# 提取FPFH特征
+# 法线搜索半径一般是点云分辨率的5倍以上
 fpfh/normal_estimation_radius: 2.0
-fpfh/search_radius: 4.0
+
+# FPFH特征搜索半径一般是点云分辨率的10倍以上
+fpfh/search_radius: 8.0

@@ -24,13 +24,9 @@ public:
    * @brief Construct a new Global Localization Node object
    */
   GlobalLocalizationNode() : nh(), private_nh("~") {
-    // 通过engine指针指向不同搜索方法
-    // GlobalLocalizationEngine是一个纯虚类，定义了set_global_map和query两个接口
-    set_engine(private_nh.param<std::string>("global_localization_engine", "FPFH_RANSAC"));
-    // 添加三个服务
-    // 1.设置搜索方法
-    // 2.设置全局地图
-    // 3.设置输入的点云
+    // 初始化地图匹配方法
+    set_engine(private_nh.param<std::string>("global_localization_engine", "BBS"));
+    // 定义三个服务端和执行函数
     set_engine_server = private_nh.advertiseService("set_engine", &GlobalLocalizationNode::set_engine, this);
     set_global_map_server = private_nh.advertiseService("set_global_map", &GlobalLocalizationNode::set_global_map, this);
     query_server = private_nh.advertiseService("query", &GlobalLocalizationNode::query, this);
@@ -47,7 +43,9 @@ private:
   }
 
   /**
-   * @brief 设置engine object
+   * @brief 设置搜索方法
+   * engine是GlobalLocalizationEngine基类的对象
+   * 有两个纯虚函数: set_global_map / query
    * @param engine_name
    */
   bool set_engine(const std::string& engine_name) {
@@ -65,7 +63,7 @@ private:
       ROS_ERROR_STREAM("Unknown Global Localization Engine:" << engine_name);
       return false;
     }
-
+    ROS_INFO_STREAM("Set Global Localization Engine:" << engine_name);
     if (global_map) {
       engine->set_global_map(global_map);
     }
@@ -74,15 +72,15 @@ private:
   }
 
   /**
-   * @brief 服务器，设置engine object
+   * @brief 服务函数: 设置点云配准的搜索方法
    */
   bool set_engine(SetGlobalLocalizationEngine::Request& req, SetGlobalLocalizationEngine::Response& res) {
-    ROS_INFO_STREAM("Set Global Localization Engine");
+    ROS_INFO_STREAM("Global Localization Engine Received");
     return set_engine(req.engine_name.data);
   }
 
   /**
-   * @brief 服务器，设置点云地图
+   * @brief 服务函数: 设置点云地图
    */
   bool set_global_map(SetGlobalMapRequest& req, SetGlobalMapResponse& res) {
     ROS_INFO_STREAM("Global Map Received");
@@ -90,18 +88,19 @@ private:
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::fromROSMsg(req.global_map, *cloud);
     cloud = downsample(cloud, private_nh.param<double>("globalmap_downsample_resolution", 0.5));
-
+    ROS_INFO_STREAM("Downsample global map done");
     globalmap_header = req.global_map.header;
     global_map = cloud;
+    // 降采样后的全局地图传到匹配方法对象
     engine->set_global_map(global_map);
 
-    ROS_INFO_STREAM("DONE");
+    ROS_INFO_STREAM("Set global map done");
 
     return true;
   }
 
   /**
-   * @brief 服务器，传输待匹配的点云执行全局定位
+   * @brief 服务函数: 执行搜索
    */
   bool query(QueryGlobalLocalizationRequest& req, QueryGlobalLocalizationResponse& res) {
     ROS_INFO_STREAM("Query Global Localization");
@@ -114,7 +113,7 @@ private:
     pcl::fromROSMsg(req.cloud, *cloud);
     cloud = downsample(cloud, private_nh.param<double>("query_downsample_resolution", 0.5));
 
-    // 定位执行
+    // 定位执行, query是虚函数，注意跳转
     auto results = engine->query(cloud, req.max_num_candidates);
 
     // 从results封装回复消息
@@ -163,6 +162,7 @@ private:
 int main(int argc, char** argv) {
   ros::init(argc, argv, "hdl_global_localization");
   ROS_INFO_STREAM("Start Global Localization Node");
+
   hdl_global_localization::GlobalLocalizationNode node;
   ros::spin();
 

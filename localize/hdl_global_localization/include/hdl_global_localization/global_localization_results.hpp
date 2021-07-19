@@ -23,15 +23,17 @@ struct GlobalLocalizationResults {
   GlobalLocalizationResults(const std::vector<GlobalLocalizationResult::Ptr>& results) : results(results) {}
 
   GlobalLocalizationResults& sort(int max_num_candidates) {
+    // remove_if和erase成对使用
+    // 删除空结果
     auto remove_loc = std::remove_if(results.begin(), results.end(), [](const auto& result) { return result == nullptr; });
     results.erase(remove_loc, results.end());
 
     std::cout << "valid solutions:" << results.size() << std::endl;
 
-    // 按照results的成员值排序
+    // lambda:按照内点比值排序从大到小排序
     // std::sort(results.begin(), results.end(), [](const auto& lhs, const auto& rhs) { return lhs->error < rhs->error; });
     std::sort(results.begin(), results.end(), [](const auto& lhs, const auto& rhs) { return lhs->inlier_fraction > rhs->inlier_fraction; });
-    // 只保留max_num_candidates(1)个结果
+    // 删除max_num_candidates之后的数据
     if (results.size() > max_num_candidates) {
       results.erase(results.begin() + max_num_candidates, results.end());
     }

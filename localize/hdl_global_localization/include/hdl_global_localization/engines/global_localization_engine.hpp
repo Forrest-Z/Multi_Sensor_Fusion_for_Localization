@@ -16,7 +16,7 @@ public:
   GlobalLocalizationEngine() {}
   virtual ~GlobalLocalizationEngine() {}
 
-  // 两个纯虚函数接口set_global_map query
+  // 两个纯虚函数接口
   virtual void set_global_map(pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud) = 0;
   virtual GlobalLocalizationResults query(pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud, int max_num_candidates) = 0;
 };

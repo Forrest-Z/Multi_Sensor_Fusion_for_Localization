@@ -42,6 +42,7 @@ void VoxelSet::set_cloud(pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud) {
   }
 }
 
+// TODO:实际计算误差的函数
 double VoxelSet::matching_error(const pcl::PointCloud<pcl::PointXYZ>& cloud, double* inlier_fraction) const {
   int num_inliers = 0;
   double errors = 0.0;
