@@ -2,6 +2,7 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl/common/transforms.h>
+#include <pcl/filters/voxel_grid.h>
 
 #include <ros/ros.h>
 #include <pcl_ros/point_cloud.h>
@@ -29,9 +30,20 @@ public:
     inlier_fraction_pub = nh.advertise<std_msgs::Float64>("/inlier_fraction", 1);
 
     set_engine(nh.param<std::string>("engine_name", "FPFH_RANSAC"));
-    pcl::PointCloud<pcl::PointXYZ>::Ptr global_map(new pcl::PointCloud<pcl::PointXYZ>);
+    // 拿到全局地图
+    global_map.reset(new pcl::PointCloud<pcl::PointXYZ>());
     pcl::io::loadPCDFile(nh.param<std::string>("global_map_path", "/home/sean/ROS/seg_ws/src/localize/hdl_localization/data/6_new_mesh.pcd"), *global_map);
     global_map->header.frame_id = "map";
+    
+    // 降采样
+    double global_map_downsample_resolution = nh.param<double>("global_map_downsample_resolution", 0.1);
+    boost::shared_ptr<pcl::VoxelGrid<pcl::PointXYZ>> voxelgrid(new pcl::VoxelGrid<pcl::PointXYZ>());
+    voxelgrid->setLeafSize(global_map_downsample_resolution, global_map_downsample_resolution, global_map_downsample_resolution);
+    voxelgrid->setInputCloud(global_map);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr filtered(new pcl::PointCloud<pcl::PointXYZ>());
+    voxelgrid->filter(*filtered);
+    global_map = filtered;
+
     set_global_map(global_map);
   }
 
@@ -49,6 +61,7 @@ public:
 
   // 设置全局地图
   void set_global_map(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
+    // 通过服务把全局地图发给engine
     hdl_global_localization::SetGlobalMap srv;
     pcl::toROSMsg(*cloud, srv.request.global_map);
 
@@ -57,10 +70,11 @@ public:
     } else {
       ROS_INFO_STREAM("Succeed to set global map");
     }
-    // 这里输出的点云没有降采样，但是在service的服务函数中会执行降采样
-    cloud->header.frame_id = "map";
-    globalmap_pub.publish(cloud);
+    // 发布latched点云
+    globalmap_pub_timer = nh.createWallTimer(ros::WallDuration(1.0), &GlobalLocalizationTestNode::pub_once_cb, this, true, true);
   }
+
+  void pub_once_cb(const ros::WallTimerEvent& event) { globalmap_pub.publish(global_map); }
 
   void points_callback(sensor_msgs::PointCloud2ConstPtr cloud_msg) {
     ROS_INFO_STREAM("Callback:" << cloud_msg->header.seq);
@@ -92,7 +106,7 @@ public:
     std::uint32_t red_color = ((std::uint32_t)r << 16 | (std::uint32_t)g << 8 | (std::uint32_t)b);
     r = 0, g = 255, b = 0;  // Green color
     std::uint32_t green_color = ((std::uint32_t)r << 16 | (std::uint32_t)g << 8 | (std::uint32_t)b);
-    if (srv.response.inlier_fractions[0] > nh.param<double>("output_inlier_fraction_threshold", 0.90)) {
+    if (srv.response.inlier_fractions[0] > nh.param<double>("output_inlier_fraction_threshold", 0.95)) {
       for (auto& point : transformed->points) {
         point.rgb = *reinterpret_cast<float*>(&green_color);
       }
@@ -120,13 +134,17 @@ private:
   ros::ServiceClient set_global_map_service;
   ros::ServiceClient query_service;
 
-  ros::Publisher globalmap_pub;
   ros::Publisher points_pub;
   ros::Subscriber points_sub;
 
   // 发布定位结果
   ros::Publisher inlier_fraction_pub;
   ros::Publisher error_pub;
+
+  // 发布全局地图
+  pcl::PointCloud<pcl::PointXYZ>::Ptr global_map;
+  ros::Publisher globalmap_pub;
+  ros::WallTimer globalmap_pub_timer;
 };
 
 int main(int argc, char** argv) {

@@ -37,9 +37,7 @@ pcl::PointCloud<pcl::FPFHSignature33>::ConstPtr GlobalLocalizationEngineFPFH_RAN
   fest.setRadiusSearch(search_radius);
   fest.setInputCloud(cloud);
   fest.setInputNormals(normals);
-  ROS_INFO_STREAM("debug1");
-  fest.compute(*features);  // 这一步卡死
-  ROS_INFO_STREAM("debug2");
+  fest.compute(*features);  // 输入的点云太大这一步卡死
   return features;
 }
 
