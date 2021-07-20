@@ -7,7 +7,6 @@
 #include <pcl_ros/point_cloud.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <std_msgs/Float64.h>
-#include <geometry_msgs/PoseWithCovarianceStamped.h>
 
 // 定义的三个srv
 #include <hdl_global_localization/SetGlobalLocalizationEngine.h>
@@ -17,10 +16,6 @@
 class GlobalLocalizationTestNode {
 public:
   GlobalLocalizationTestNode() : nh() {
-    // nh.param<std::string>("points_topic", points_topic, "/velodyne_points");
-    // nh.param<std::string>("engine", engine, "FPFH_RANSAC");
-    // nh.param<std::string>("global_map_path", global_map_path, "/home/sean/ROS/seg_ws/src/localize/hdl_localization/data/6_new_mesh.pcd");
-
     // 注册三个服务的client
     set_engine_service = nh.serviceClient<hdl_global_localization::SetGlobalLocalizationEngine>("/hdl_global_localization/set_engine");
     set_global_map_service = nh.serviceClient<hdl_global_localization::SetGlobalMap>("/hdl_global_localization/set_global_map");
@@ -28,15 +23,16 @@ public:
 
     globalmap_pub = nh.advertise<sensor_msgs::PointCloud2>("/globalmap", 1, true);  // 第三个参数开启latch,相当于静态话题
     points_pub = nh.advertise<sensor_msgs::PointCloud2>("/aligned_points", 1);
-    points_sub = nh.subscribe("/velodyne_points", 1, &GlobalLocalizationTestNode::points_callback, this);
+    points_sub = nh.subscribe(nh.param<std::string>("points_topic", "/velodyne_points"), 1, &GlobalLocalizationTestNode::points_callback, this);
     // 发布匹配结果
     error_pub = nh.advertise<std_msgs::Float64>("/error", 1);
     inlier_fraction_pub = nh.advertise<std_msgs::Float64>("/inlier_fraction", 1);
 
-    // pcl::PointCloud<pcl::PointXYZ>::Ptr global_map(new pcl::PointCloud<pcl::PointXYZ>);
-    // pcl::io::loadPCDFile(global_map_path, *global_map);
-    // set_engine(engine);
-    // set_global_map(global_map);
+    set_engine(nh.param<std::string>("engine_name", "FPFH_RANSAC"));
+    pcl::PointCloud<pcl::PointXYZ>::Ptr global_map(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::io::loadPCDFile(nh.param<std::string>("global_map_path", "/home/sean/ROS/seg_ws/src/localize/hdl_localization/data/6_new_mesh.pcd"), *global_map);
+    global_map->header.frame_id = "map";
+    set_global_map(global_map);
   }
 
   // 设置全局定位方式
@@ -46,6 +42,8 @@ public:
 
     if (!set_engine_service.call(srv)) {
       ROS_INFO_STREAM("Failed to set global localization engine");
+    } else {
+      ROS_INFO_STREAM("Succeed to set global localization engine:" << engine_name);
     }
   }
 
@@ -129,27 +127,10 @@ private:
   // 发布定位结果
   ros::Publisher inlier_fraction_pub;
   ros::Publisher error_pub;
-
-  // std::string points_topic;
-  // std::string global_map_path;
-  // std::string engine;
 };
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "hdl_global_localization_test");
-
-  // 导入本地全局地图
-  pcl::PointCloud<pcl::PointXYZ>::Ptr global_map(new pcl::PointCloud<pcl::PointXYZ>);
-  if (argc == 2) {
-    pcl::io::loadPCDFile(argv[1], *global_map);
-  } else {
-    pcl::io::loadPCDFile("/home/sean/ROS/seg_ws/src/localize/hdl_localization/data/6_new_mesh.pcd", *global_map);
-  }
-
   GlobalLocalizationTestNode node;
-  // 配置参数搜索方式和全局地图
-  node.set_engine("FPFH_RANSAC");  // BBS, FPFH_RANSAC, FPFH_TEASER
-  node.set_global_map(global_map);
-
   ros::spin();
 }

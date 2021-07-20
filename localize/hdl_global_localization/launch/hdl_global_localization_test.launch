@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch>
+  <param name="points_topic" value="/velodyne_points" />
+  <param name="global_map_path" value="/home/sean/ROS/seg_ws/src/localize/hdl_localization/data/6_new_mesh.pcd" />
+  <!-- BBS FPFH_RANSAC -->
+  <param name="engine_name" value="FPFH_RANSAC" />
+  <node name="hdl_global_localization_test" pkg="hdl_global_localization" type="hdl_global_localization_test" output="screen"/>
+</launch>
