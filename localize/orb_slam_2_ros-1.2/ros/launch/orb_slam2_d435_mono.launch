@@ -36,15 +36,16 @@
     <!--If the node should wait for a camera_info topic to take the camera calibration data-->
     <param name="load_calibration_from_cam" type="bool" value="false" />
     <!-- Camera calibration and distortion parameters (OpenCV) -->
-    <param name="camera_fx" type="double" value="306.07521" />
-    <param name="camera_fy" type="double" value="305.71203" />
-    <param name="camera_cx" type="double" value="165.3913" />
-    <param name="camera_cy" type="double" value="119.85677" />
+    <!-- 1280*720分辨率的相机参数 -->
+    <param name="camera_fx" type="double" value="910.459778" />
+    <param name="camera_fy" type="double" value="922.532471" />
+    <param name="camera_cx" type="double" value="634.381993" />
+    <param name="camera_cy" type="double" value="346.513158" />
     <!-- Camera calibration and distortion parameters (OpenCV) -->
-    <param name="camera_k1" type="double" value="0.121090" />
-    <param name="camera_k2" type="double" value="-0.237727" />
-    <param name="camera_p1" type="double" value="-0.000981" />
-    <param name="camera_p2" type="double" value="-0.000291" />
+    <param name="camera_k1" type="double" value="0.091577" />
+    <param name="camera_k2" type="double" value="-0.191165" />
+    <param name="camera_p1" type="double" value="-0.003046" />
+    <param name="camera_p2" type="double" value="-0.003552" />
     <param name="camera_k3" type="double" value="0.0" />
   </node>
 
