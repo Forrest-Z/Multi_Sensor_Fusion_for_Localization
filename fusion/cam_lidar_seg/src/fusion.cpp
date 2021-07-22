@@ -166,18 +166,36 @@ void fusion::seg(const pcl::PointCloud<pcl::PointXYZ>::const_iterator &it,
     {
         // 拿到像素点的颜色，注意opencv的横纵坐标顺序，直接用cv::Point最保险
         color_bgr = cv_ptr->image.at<cv::Vec3b>(pixel);
+
         // 把人的颜色删除
-        if (color_bgr(0) == people(0) && color_bgr(1) == people(1) && color_bgr(2) == people(2))
+        // if (color_bgr(0) == people(0) && color_bgr(1) == people(1) && color_bgr(2) == people(2))
+        // {
+        //     return;
+        // }
+        // seg_point.x = it->x;
+        // seg_point.y = it->y;
+        // seg_point.z = it->z;
+        // seg_point.b = color_bgr(0);
+        // seg_point.g = color_bgr(1);
+        // seg_point.r = color_bgr(2);
+        // seg_cloud.push_back(seg_point);
+
+        // 只添加想要的颜色
+        if ((color_bgr(0) == wall(0) && color_bgr(1) == wall(1) && color_bgr(2) == wall(2)) ||
+            (color_bgr(0) == building(0) && color_bgr(1) == building(1) && color_bgr(2) == building(2)) ||
+            (color_bgr(0) == floor(0) && color_bgr(1) == floor(1) && color_bgr(2) == floor(2)) ||
+            (color_bgr(0) == ceiling(0) && color_bgr(1) == ceiling(1) && color_bgr(2) == ceiling(2)) ||
+            (color_bgr(0) == road(0) && color_bgr(1) == road(1) && color_bgr(2) == road(2)) ||
+            (color_bgr(0) == light(0) && color_bgr(1) == light(1) && color_bgr(2) == light(2)))
         {
-            return;
+            seg_point.x = it->x;
+            seg_point.y = it->y;
+            seg_point.z = it->z;
+            seg_point.b = color_bgr(0);
+            seg_point.g = color_bgr(1);
+            seg_point.r = color_bgr(2);
+            seg_cloud.push_back(seg_point);
         }
-        seg_point.x = it->x;
-        seg_point.y = it->y;
-        seg_point.z = it->z;
-        seg_point.b = color_bgr(0);
-        seg_point.g = color_bgr(1);
-        seg_point.r = color_bgr(2);
-        seg_cloud.push_back(seg_point);
     }
     // 视野外的点
     else
@@ -186,8 +204,8 @@ void fusion::seg(const pcl::PointCloud<pcl::PointXYZ>::const_iterator &it,
         seg_point.y = it->y;
         seg_point.z = it->z;
         seg_point.r = 255;
-        seg_point.g = 0;
-        seg_point.b = 0;
+        seg_point.g = 255;
+        seg_point.b = 255;
         seg_cloud.push_back(seg_point);
     }
 }

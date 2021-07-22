@@ -36,9 +36,15 @@ private:
     pcl::PointCloud<pcl::PointXYZ> cloud;
 
     // 待删除物体的颜色(BGR)
-    cv::Vec3d road = cv::Vec3d(140, 140, 140);
     cv::Vec3d car = cv::Vec3d(200, 102, 0);
     cv::Vec3d people = cv::Vec3d(61, 5, 150);
+    // 待保存物体的颜色(BGR)
+    cv::Vec3d wall = cv::Vec3d(120, 120, 120);
+    cv::Vec3d building = cv::Vec3d(180, 120, 120);
+    cv::Vec3d floor = cv::Vec3d(80, 50, 50);
+    cv::Vec3d ceiling = cv::Vec3d(120, 120, 80);
+    cv::Vec3d road = cv::Vec3d(140, 140, 140);
+    cv::Vec3d light = cv::Vec3d(255, 173, 0);
 
     cv::Mat points_in_lidar_homo = cv::Mat(4, 1, cv::DataType<double>::type); // 原始点齐次形式
     cv::Mat pixel_homo = cv::Mat(3, 1, cv::DataType<double>::type);           // 像素点齐次形式
