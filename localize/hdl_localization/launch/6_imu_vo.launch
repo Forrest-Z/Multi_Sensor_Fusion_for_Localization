@@ -13,7 +13,7 @@
     <arg name="invert_imu_acc" default="false" />
     <arg name="invert_imu_gyro" default="false" />
     <arg name="use_global_localization" default="true" />
-    <arg name="imu_topic" default="/camera4/imu" />
+    <arg name="imu_topic" default="/imu_transformed" />
     <arg name="enable_robot_odometry_prediction" value="true" />
     <arg name="robot_odom_frame_id" value="odom" />
     <!-- 打印误差 -->
@@ -33,9 +33,8 @@
     <!-- globalmap_server_nodelet -->
     <node pkg="nodelet" type="nodelet" name="globalmap_server_nodelet" args="load hdl_localization/GlobalmapServerNodelet $(arg nodelet_manager)">
         <!-- 点云地图路径 -->
-        <param name="globalmap_pcd" value="$(find hdl_localization)/data/6_from_mesh_v2.pcd" />
-        <!-- <param name="globalmap_pcd" value="$(find hdl_localization)/data/6_clean_downsample_align_to_mesh.pcd" /> -->
-        <param name="convert_utm_to_local" value="true" />
+        <param name="globalmap_pcd" value="$(find hdl_localization)/data/6_new_mesh.pcd" />
+        <param name="convert_utm_to_local" value="false" />
         <param name="downsample_resolution" value="0.1" />
     </node>
 
