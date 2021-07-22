@@ -135,7 +135,7 @@ class ROSSegmentation():
         out_msg = Image()
         out_msg.header, out_msg.encoding  = msg.header, "rgb8"
         out_msg.height, out_msg.width = pred_color.shape[0], pred_color.shape[1]
-        out_msg.step, out_msg.data = pred_color.shape[1]*3,  pred_color.tostring()
+        out_msg.step, out_msg.data = pred_color.shape[1]*3,  pred_color.tobytes()
 
         self.seg_pub.publish(out_msg)
         
