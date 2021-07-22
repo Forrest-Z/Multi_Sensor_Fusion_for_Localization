@@ -1,7 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-  <param name="points_topic" value="/velodyne_points" />
-  <!-- <param name="points_topic" value="/cloud_pcd" /> -->
+  <param name="points_topic" value="/camera_lidar_fusion/seg_cloud" />
   <param name="global_map_downsample_resolution" value="0.1" />
   <param name="global_map_path" value="$(find hdl_localization)/data/6_new_mesh.pcd" />
   <!-- BBS FPFH_RANSAC -->
