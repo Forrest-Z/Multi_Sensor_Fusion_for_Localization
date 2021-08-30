@@ -28,6 +28,20 @@
 class projector
 {
 private:
+    // 待保存物体的颜色(BGR)
+    cv::Vec3d wall = cv::Vec3d(120, 120, 120);
+    cv::Vec3d building = cv::Vec3d(180, 120, 120);
+    cv::Vec3d floor = cv::Vec3d(80, 50, 50);
+    cv::Vec3d ceiling = cv::Vec3d(120, 120, 80);
+    cv::Vec3d road = cv::Vec3d(140, 140, 140);
+    cv::Vec3d light = cv::Vec3d(255, 173, 0);
+    cv::Vec3d door = cv::Vec3d(8, 255, 51);
+    cv::Vec3d window = cv::Vec3d(230, 230, 230);
+    cv::Vec3d ground = cv::Vec3d(120, 120, 70);
+
+    cv::Vec3d box = cv::Vec3d(0, 255, 20);
+    cv::Vec3d person = cv::Vec3d(150, 5, 61);
+
     image_transport::Publisher image_publisher;
     ros::Publisher seg_cloud_pub;
 

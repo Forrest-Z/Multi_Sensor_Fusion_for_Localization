@@ -45,6 +45,9 @@ private:
     cv::Vec3d ceiling = cv::Vec3d(120, 120, 80);
     cv::Vec3d road = cv::Vec3d(140, 140, 140);
     cv::Vec3d light = cv::Vec3d(255, 173, 0);
+    cv::Vec3d door = cv::Vec3d(8, 255, 51);
+    cv::Vec3d window = cv::Vec3d(230, 230, 230);
+    cv::Vec3d ground = cv::Vec3d(120, 120, 70);
 
     cv::Mat points_in_lidar_homo = cv::Mat(4, 1, cv::DataType<double>::type); // 原始点齐次形式
     cv::Mat pixel_homo = cv::Mat(3, 1, cv::DataType<double>::type);           // 像素点齐次形式

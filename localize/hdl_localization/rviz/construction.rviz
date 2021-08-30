@@ -4,10 +4,13 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /Global Options1
         - /TF1/Frames1
+        - /Odometry1
         - /Odometry1/Shape1
         - /地图1
         - /雷达1
+        - /雷达1/匹配点云1
       Splitter Ratio: 0.5
     Tree Height: 268
   - Class: rviz/Selection
@@ -40,7 +43,7 @@ Visualization Manager:
       Cell Size: 10
       Class: rviz/Grid
       Color: 160; 160; 164
-      Enabled: true
+      Enabled: false
       Line Style:
         Line Width: 0.029999999329447746
         Value: Lines
@@ -53,7 +56,7 @@ Visualization Manager:
       Plane: XY
       Plane Cell Count: 50
       Reference Frame: <Fixed Frame>
-      Value: true
+      Value: false
     - Class: rviz/TF
       Enabled: false
       Frame Timeout: 50
@@ -86,7 +89,7 @@ Visualization Manager:
           Value: true
         Value: false
       Enabled: true
-      Keep: 50
+      Keep: 1
       Name: Odometry
       Position Tolerance: 0.10000000149011612
       Shape:
@@ -94,10 +97,10 @@ Visualization Manager:
         Axes Length: 1
         Axes Radius: 0.10000000149011612
         Color: 52; 101; 164
-        Head Length: 0.30000001192092896
-        Head Radius: 0.20000000298023224
-        Shaft Length: 1
-        Shaft Radius: 0.05000000074505806
+        Head Length: 1.2000000476837158
+        Head Radius: 1.2000000476837158
+        Shaft Length: 3
+        Shaft Radius: 0.5
         Value: Arrow
       Topic: /odom
       Unreliable: false
@@ -209,7 +212,7 @@ Visualization Manager:
           Queue Size: 10
           Selectable: true
           Size (Pixels): 3
-          Size (m): 0.05999999865889549
+          Size (m): 0.10000000149011612
           Style: Flat Squares
           Topic: /aligned_points
           Unreliable: false
@@ -292,7 +295,7 @@ Visualization Manager:
       Value: true
   Enabled: true
   Global Options:
-    Background Color: 238; 238; 236
+    Background Color: 255; 255; 255
     Default Light: true
     Fixed Frame: map
     Frame Rate: 30
@@ -318,16 +321,16 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 44.293418884277344
+      Distance: 38.002933502197266
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.767242431640625
-        Y: -2.277235269546509
-        Z: 3.364448070526123
+        X: -2.697160243988037
+        Y: -2.792815923690796
+        Z: 3.3392724990844727
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
@@ -336,7 +339,7 @@ Visualization Manager:
       Pitch: 1.5697963237762451
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.1352758407592773
+      Yaw: 3.1402747631073
     Saved: ~
 Window Geometry:
   Displays:
